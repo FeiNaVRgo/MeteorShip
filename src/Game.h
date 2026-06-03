@@ -10,8 +10,6 @@
 #include "ECS/ECS.h"
 
 namespace ms {
-    static ecs::ECS _ecs = {};
-
     class Game {
     public:
         static auto run() -> void {
@@ -34,7 +32,7 @@ namespace ms {
                 }
 
                 // clear the window with black color
-                window.clear(sf::Color::Black);
+                window.clear(sf::Color::Magenta);
 
                 // draw everything here...
                 // window.draw(...);
