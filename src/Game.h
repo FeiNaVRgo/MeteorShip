@@ -10,22 +10,6 @@
 #include "ECS/ECS.h"
 
 namespace ms {
-    struct Vec {
-        int x;
-    };
-
-    class VecSystem : public ecs::System {
-        void setEcs(ecs::ECS *_ecs) override {
-            ecs = _ecs;
-        }
-
-        void update(float deltaTime) override {
-            for (auto const& [vec] : ecs->view<Vec>()) {
-                vec.x += vec.x * deltaTime;
-            }
-        }
-    };
-
     class Game {
     public:
         static auto run() -> void {
