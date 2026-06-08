@@ -8,171 +8,321 @@
 #include <list>
 #include <queue>
 #include <unordered_set>
+#include <optional>
+#include <algorithm>
+#include <memory>
 #include <SFML/Graphics/Rect.hpp>
+#include <SFML/Graphics.hpp>
 #include "ECS/ECS.h"
 
 namespace ms::systems {
     static inline constexpr uint8_t MAX_ENTITIES_IN_NODE = 8;
+    static inline constexpr uint8_t MAX_QUADTREE_DEPTH = 4;
 
     enum class ENodesChildren : uint8_t {
-        TopRight,
-        TopLeft,
-        BottomRight,
-        BottomLeft,
+        TopLeft = 0,
+        TopRight = 1,
+        BottomLeft = 2,
+        BottomRight = 3,
     };
 
     struct Node {
         sf::FloatRect bounds;
-
         Node* parent;
-        std::vector<Node*> children;
-        std::optional<std::list<std::pair<ecs::Entity, sf::FloatRect>>> entities; // only constructed when children vector is empty, that means this node is a leaf
+        std::vector<std::unique_ptr<Node>> children;
+        std::optional<std::list<ecs::Entity>> entities;
+        uint8_t depth;
 
-        Node(ENodesChildren where, Node* _parent, std::list<std::pair<ecs::Entity, sf::FloatRect>> _entities) {
-            switch (where) {
-                case ENodesChildren::TopRight:
-                    bounds = {};
-                    break;
-                case ENodesChildren::TopLeft:
-                    bounds = {};
-                    break;
-                case ENodesChildren::BottomRight:
-                    bounds = {};
-                    break;
-                case ENodesChildren::BottomLeft:
-                    bounds = {};
-                    break;
-                default:
-                    bounds = {};
-            }
-            parent = _parent;
-            if (_entities.empty()) {
-                entities = std::nullopt;
-            } else {
-                entities.emplace();
-                for (auto& entity : _entities) {
-                    if (bounds.findIntersection(entity.second).has_value()) {
-                        entities.value().emplace_back(entity);
-                    }
+        explicit Node(Node* _parent = nullptr, uint8_t _depth = 0)
+            : parent(_parent), depth(_depth) {
+            entities.emplace();
+        }
+
+        Node(ENodesChildren where, Node* _parent, const std::list<ecs::Entity>& _entities, uint8_t _depth, ecs::SparseSet<sf::FloatRect> const& boundsOfEntities)
+            : parent(_parent), depth(_depth) {
+
+            if (parent) {
+                const auto& parentBounds = parent->bounds;
+                float halfWidth = parentBounds.size.x / 2.0f;
+                float halfHeight = parentBounds.size.y / 2.0f;
+
+                switch (where) {
+                    case ENodesChildren::TopLeft:
+                        bounds = sf::FloatRect(parentBounds.position, sf::Vector2f(halfWidth, halfHeight));
+                        break;
+                    case ENodesChildren::TopRight:
+                        bounds = sf::FloatRect(
+                            sf::Vector2f(parentBounds.position.x + halfWidth, parentBounds.position.y),
+                            sf::Vector2f(halfWidth, halfHeight)
+                        );
+                        break;
+                    case ENodesChildren::BottomLeft:
+                        bounds = sf::FloatRect(
+                            sf::Vector2f(parentBounds.position.x, parentBounds.position.y + halfHeight),
+                            sf::Vector2f(halfWidth, halfHeight)
+                        );
+                        break;
+                    case ENodesChildren::BottomRight:
+                        bounds = sf::FloatRect(
+                            sf::Vector2f(parentBounds.position.x + halfWidth, parentBounds.position.y + halfHeight),
+                            sf::Vector2f(halfWidth, halfHeight)
+                        );
+                        break;
                 }
             }
+
+            entities.emplace();
+            for (const auto& entity : _entities) {
+                if (bounds.findIntersection(boundsOfEntities.get(entity)).has_value()) {
+                    entities->push_back(entity);
+                }
+            }
+        }
+
+        [[nodiscard]] bool isLeaf() const {
+            return children.empty();
+        }
+
+        [[nodiscard]] bool hasEntities() const {
+            return entities.has_value() && !entities->empty();
         }
     };
 
     class Quadtree {
     private:
-        Node* root = new Node(static_cast<ENodesChildren>(-1), nullptr, {});
+        std::unique_ptr<Node> root;
+        ecs::SparseSet<sf::FloatRect> sparse_set;
     public:
-        void insert(ecs::Entity entity, sf::FloatRect bounds) {
-            insert(entity, bounds, root);
+        sf::FloatRect worldBounds;
+        explicit Quadtree(const sf::FloatRect& bounds) : worldBounds(bounds) {
+            root = std::make_unique<Node>(nullptr, 0);
+            root->bounds = bounds;
         }
 
-        void remove(ecs::Entity entity, sf::FloatRect bounds) {
-            remove(entity, bounds, root);
+        Quadtree(float x, float y, float width, float height)
+            : worldBounds(sf::FloatRect(sf::Vector2f(x, y), sf::Vector2f(width, height))) {
+            root = std::make_unique<Node>(nullptr, 0);
+            root->bounds = worldBounds;
         }
 
-        std::list<ecs::Entity> query(sf::FloatRect bounds) {
-            return query(bounds, root);
-        }
+        Quadtree(const Quadtree&) = delete;
+        Quadtree& operator=(const Quadtree&) = delete;
 
-    private:
-        void insert(ecs::Entity entity, sf::FloatRect bounds, Node* node) {
-            if (node->entities.has_value()) {
-                node->entities.value().emplace_back(entity, bounds);
-                if (node->entities.value().size() > MAX_ENTITIES_IN_NODE) {
-                    split(node);
-                }
+        Quadtree(Quadtree&&) = default;
+        Quadtree& operator=(Quadtree&&) = default;
+
+        void insert(ecs::Entity entity, const sf::FloatRect& bounds) {
+            if (!root->bounds.findIntersection(bounds).has_value()) {
                 return;
             }
-            for (auto const& child : node->children) {
-                if (child->bounds.findIntersection(bounds).has_value()) {
-                    insert(entity, bounds, child);
+            sparse_set.emplace(entity, bounds);
+            insert(entity, bounds, root.get());
+        }
+
+        void remove(ecs::Entity entity) {
+            remove(entity, root.get());
+            sparse_set.remove(entity);
+        }
+
+        void update(ecs::Entity entity, const sf::FloatRect& newBounds) {
+            if (sparse_set.get(entity) == newBounds) return;
+            remove(entity);
+            insert(entity, newBounds);
+        }
+
+        [[nodiscard]] std::list<ecs::Entity> query(const sf::FloatRect& bounds) const {
+            return query(bounds, root.get());
+        }
+
+        [[nodiscard]] std::list<ecs::Entity> queryAll() const {
+            std::list<ecs::Entity> result;
+            queryAll(root.get(), result);
+            return result;
+        }
+
+        void clear() {
+            root = std::make_unique<Node>(nullptr, 0);
+            root->bounds = worldBounds;
+        }
+
+        void draw(sf::RenderTarget& renderTarget) {
+            draw(root.get(), renderTarget);
+        }
+    private:
+        void draw(Node* node, sf::RenderTarget& renderTarget) {
+            if (node->isLeaf()) {
+                drawRect(node->bounds, renderTarget);
+            } else {
+                drawRect(node->bounds, renderTarget);
+                for (const auto& child : node->children) {
+                    draw(child.get(), renderTarget);
                 }
             }
         }
 
-        void remove(ecs::Entity entity, sf::FloatRect bounds, Node* node) {
+        void drawRect(sf::FloatRect const& rect, sf::RenderTarget& renderTarget) {
+            constexpr float thickness = 2.f;
+            sf::RectangleShape rectangle;
+            rectangle.setSize(sf::Vector2f(rect.size - sf::Vector2{thickness * 2.f, thickness * 2.f}));
+            rectangle.setFillColor(sf::Color::Transparent);
+            rectangle.setOutlineColor(sf::Color::Red);
+            rectangle.setOutlineThickness(thickness);
+            rectangle.setPosition(rect.position + sf::Vector2(thickness, thickness));
+            renderTarget.draw(rectangle);
+        }
+
+        void insert(ecs::Entity entity, const sf::FloatRect& bounds, Node* node) {
+            if (node->isLeaf()) {
+                node->entities->emplace_back(entity);
+
+                if (node->entities->size() > MAX_ENTITIES_IN_NODE && node->depth < MAX_QUADTREE_DEPTH) {
+                    split(node);
+                }
+            } else {
+                for (const auto& child : node->children) {
+                    if (child->bounds.findIntersection(bounds).has_value()) {
+                        insert(entity, bounds, child.get());
+                    }
+                }
+            }
+        }
+
+        void remove(ecs::Entity entity, Node* node) {
             std::queue<Node*> queue;
             std::unordered_set<Node*> nodesToCheck;
             queue.push(node);
 
             while (!queue.empty()) {
-                auto nq = queue.front();
-                if (nq->entities.has_value()) {
-                    std::erase_if(nq->entities.value(), [&](auto const& var) {
-                       return var.first == entity;
-                    });
-                    nodesToCheck.insert(nq->parent);
+                auto* current = queue.front();
+                queue.pop();
+
+                if (current->isLeaf()) {
+                    if (current->entities.has_value()) {
+                        auto it = std::ranges::remove_if(*current->entities,
+                                                         [&](const auto& ent) { return ent == entity; }).begin();
+
+                        if (it != current->entities->end()) {
+                            current->entities->erase(it, current->entities->end());
+                            if (current->parent) {
+                                nodesToCheck.insert(current->parent);
+                            }
+                        }
+                    }
                 } else {
-                    for (auto const& child : node->children) {
-                        if (child->bounds.findIntersection(bounds).has_value()) {
-                            queue.push(child);
+                    for (const auto& child : current->children) {
+                        if (child->bounds.findIntersection(sparse_set.get(entity)).has_value()) {
+                            queue.push(child.get());
                         }
                     }
                 }
-                queue.pop();
             }
 
-            for (auto const& n : nodesToCheck) {
-                int count = 0;
-                for (auto const& child : n->children) {
-                    count += child->entities.value().size();
-                }
-                if (count <= MAX_ENTITIES_IN_NODE) {
+            for (auto* n : nodesToCheck) {
+                if (canJoin(n)) {
                     join(n);
                 }
             }
         }
 
-        std::list<ecs::Entity> query(sf::FloatRect bounds, Node* node) {
+        bool canSplit(Node* node) {
+            return node->entities->size() > MAX_ENTITIES_IN_NODE && node->depth < MAX_QUADTREE_DEPTH;
+        }
+
+        bool canJoin(Node* node) const {
+            if (!node || node->isLeaf()) return false;
+
+            size_t totalEntities = 0;
+            for (const auto& child : node->children) {
+                if (child->isLeaf() && child->entities.has_value()) {
+                    totalEntities += child->entities->size();
+                } else {
+                    return false;
+                }
+                if (totalEntities > MAX_ENTITIES_IN_NODE) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        std::list<ecs::Entity> query(const sf::FloatRect& bounds, Node* node) const {
             std::queue<Node*> queue;
             std::list<ecs::Entity> entities;
             queue.push(node);
+
             while (!queue.empty()) {
-                auto nq = queue.front();
-                if (nq->entities.has_value()) {
-                    for (auto const& [ent, bd] : nq->entities.value()) {
-                        if (bounds.findIntersection(bd).has_value()) {
-                            entities.emplace_back(ent);
+                auto* current = queue.front();
+                queue.pop();
+
+                if (current->isLeaf()) {
+                    if (current->entities.has_value()) {
+                        for (const auto& ent: *current->entities) {
+                            if (bounds.findIntersection(sparse_set.get(ent)).has_value()) {
+                                entities.push_back(ent);
+                            }
                         }
                     }
                 } else {
-                    for (auto const& child : nq->children) {
+                    for (const auto& child : current->children) {
                         if (child->bounds.findIntersection(bounds).has_value()) {
-                            queue.push(child);
+                            queue.push(child.get());
                         }
                     }
                 }
-                queue.pop();
             }
 
             return entities;
         }
 
-        void split(Node* node) {
-            node->children.reserve(4);
-            for (int i = 0; i < 4; ++i) {
-                node->children[i] = new Node(static_cast<ENodesChildren>(i), node, node->entities.value());
-                if (node->children[i]->entities.value().size() > MAX_ENTITIES_IN_NODE) {
-                    split(node->children[i]);
+        void queryAll(Node* node, std::list<ecs::Entity>& result) const {
+            if (node->isLeaf() && node->entities.has_value()) {
+                for (const auto &ent: *node->entities) {
+                    result.push_back(ent);
+                }
+            } else {
+                for (const auto& child : node->children) {
+                    queryAll(child.get(), result);
                 }
             }
+        }
+
+        void split(Node* node) {
+            auto entitiesToDistribute = std::move(*node->entities);
+
+            node->children.reserve(4);
+            for (int i = 0; i < 4; ++i) {
+                auto child = std::make_unique<Node>(
+                    static_cast<ENodesChildren>(i),
+                    node,
+                    entitiesToDistribute,
+                    node->depth + 1,
+                    sparse_set
+                );
+                node->children.push_back(std::move(child));
+            }
             node->entities.reset();
-            node->entities = std::nullopt;
+            for (auto const& child : node->children) {
+                if (canSplit(child.get())) {
+                    split(child.get());
+                }
+            }
         }
 
         void join(Node* node) {
             node->entities.emplace();
-            for (auto const& child : node->children) {
-                auto& _ent = node->entities.value();
-                _ent.splice(_ent.end(), child->entities.value());
-                child->entities.reset();
-                child->entities = std::nullopt;
+            for (auto& child : node->children) {
+                if (child->isLeaf() && child->entities.has_value()) {
+                    node->entities->splice(node->entities->end(), *child->entities);
+                    child->entities.reset();
+                }
             }
+
             node->children.clear();
+            if (canJoin(node->parent)) {
+                join(node->parent);
+            }
         }
     };
 }
-
 
 #endif //METEORSHIP_QUADTREE_H

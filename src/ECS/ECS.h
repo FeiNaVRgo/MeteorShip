@@ -46,7 +46,6 @@ namespace ms {
             std::vector<Entity> sparse;
             std::vector<Entity> dense;
             std::vector<T> components;
-            std::vector<size_t> entityToIndex;
 
             size_t maxEntities;
         public:
@@ -128,6 +127,7 @@ namespace ms {
 
         class ComponentManager {
         private:
+            //TODO: clean this up
             std::array<void*, MAX_COMPONENTS> componentPools;
             std::array<size_t, MAX_COMPONENTS> componentSizes;
             std::array<ComponentType, MAX_COMPONENTS> componentIds;

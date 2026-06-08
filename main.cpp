@@ -2,5 +2,6 @@
 
 int main()
 {
-    ms::Game::run();
+    auto game = ms::Game();
+    game.run();
 }
