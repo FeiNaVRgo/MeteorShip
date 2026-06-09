@@ -38,8 +38,6 @@ namespace ms {
             }
         };
 
-        struct IComponent {};
-
         class IComponentPool {
         public:
             virtual ~IComponentPool() = default;
@@ -57,24 +55,24 @@ namespace ms {
         public:
             explicit SparseSet() = default;
 
-            [[nodiscard]] bool has(Entity entity) const override {
+            [[nodiscard]] bool has(Entity const entity) const override {
                 if (entity >= sparse.size()) return false;
-                size_t pos = sparse[entity];
+                const size_t pos = sparse[entity];
                 return pos != static_cast<Entity>(-1) && pos < dense.size() && dense[pos] == entity;
             }
 
-            T& get(Entity entity) {
+            T& get(Entity const entity) {
                 assert(has(entity));
                 return components[sparse[entity]];
             }
 
-            [[nodiscard]] const T& get(Entity entity) const {
+            [[nodiscard]] const T& get(Entity const entity) const {
                 assert(has(entity));
                 return components[sparse[entity]];
             }
 
             template<typename ...Args>
-            T& emplace(Entity entity, Args&& ...args) {
+            T& emplace(Entity const entity, Args&& ...args) {
                 std::cout << std::endl;
                 if (has(entity)) {
                     T& comp = components[sparse[entity]];
@@ -86,18 +84,18 @@ namespace ms {
                     sparse.resize(entity + 1, static_cast<Entity>(-1));
                 }
 
-                size_t pos = dense.size();
+                const size_t pos = dense.size();
                 sparse[entity] = static_cast<Entity>(pos);
                 dense.push_back(entity);
                 components.emplace_back(std::forward<Args>(args)...);
                 return components.back();
             }
 
-            void remove(Entity entity) override {
+            void remove(Entity const entity) override {
                 if (!has(entity)) return;
                 size_t pos = sparse[entity];
                 size_t lastPos = dense.size() - 1;
-                Entity lastEntity = dense[lastPos];
+                const auto lastEntity = dense[lastPos];
 
                 dense[pos] = lastEntity;
                 components[pos] = std::move(components[lastPos]);
@@ -133,12 +131,12 @@ namespace ms {
 
         class ComponentManager {
         private:
-            std::array<IComponentPool*, MAX_COMPONENTS> componentPools;
+            std::array<IComponentPool*, MAX_COMPONENTS> componentPools{};
             ComponentType numComponents = 0;
 
             template<typename T>
             SparseSet<T>& getPool() {
-                ComponentType id = ComponentTypeId<T>::get();
+                const ComponentType id = ComponentTypeId<T>::get();
 
                 if (id >= MAX_COMPONENTS) {
                     throw std::runtime_error("Component type ID out of range!");
@@ -153,7 +151,7 @@ namespace ms {
 
             template<typename T>
             const SparseSet<T>& getPool() const {
-                ComponentType id = ComponentTypeId<T>::get();
+                const ComponentType id = ComponentTypeId<T>::get();
                 assert(id < numComponents && componentPools[id] != nullptr);
                 return *static_cast<const SparseSet<T>*>(componentPools[id]);
             }
@@ -163,17 +161,17 @@ namespace ms {
             }
 
             ~ComponentManager() {
-                for (auto* componentPool : componentPools) {
+                for (const auto* componentPool : componentPools) {
                     delete componentPool;
                 }
             }
 
-            void removeComponentByType(Entity entity, ComponentType type) {
+            void removeComponentByType(const Entity entity, const ComponentType type) const {
                 if (type >= numComponents || componentPools[type] == nullptr) return;
                 componentPools[type]->remove(entity);
             }
 
-            void removeAllComponentsFromEntity(Entity entity) {
+            void removeAllComponentsFromEntity(const Entity entity) const {
                 for (ComponentType type = 0; type < numComponents; ++type) {
                     if (componentPools[type] && componentPools[type]->has(entity)) {
                         componentPools[type]->remove(entity);
@@ -183,8 +181,7 @@ namespace ms {
 
             template<typename T>
             void registerComponent() {
-                ComponentType id = ComponentTypeId<T>::get();
-                if (componentPools[id] == nullptr) {
+                if (const ComponentType id = ComponentTypeId<T>::get(); componentPools[id] == nullptr) {
                     componentPools[id] = new SparseSet<T>();
                     numComponents++;
                 }
@@ -224,11 +221,6 @@ namespace ms {
             [[nodiscard]] std::vector<Entity> const& getEntitiesWithComponent() const {
                 return getPool<T>().entities();
             }
-
-            [[nodiscard]] size_t getComponentCount(ComponentType type) const {
-                if (type >= numComponents || componentPools[type] == nullptr) return 0;
-                return static_cast<SparseSet<uint8_t>*>(componentPools[type])->size();
-            }
         };
 
         class EntityManager {
@@ -247,14 +239,12 @@ namespace ms {
                 Entity entity;
 
                 if (!freeList.empty()) {
-                    // Reuse a freed slot
                     entity = freeList.top();
                     freeList.pop();
                     entities[entity].alive = true;
                     entities[entity].version++;
                     aliveCount++;
                 } else {
-                    // Create new slot
                     entity = entities.size();
                     entities.emplace_back();
                     entities[entity].alive = true;
@@ -265,7 +255,7 @@ namespace ms {
                 return entity;
             }
 
-            void destroy(Entity entity) {
+            void destroy(const Entity entity) {
                 if (entity >= entities.size() || !entities[entity].alive) return;
 
                 entities[entity].alive = false;
@@ -273,11 +263,11 @@ namespace ms {
                 aliveCount--;
             }
 
-            [[nodiscard]] bool isAlive(Entity entity) const {
+            [[nodiscard]] bool isAlive(const Entity entity) const {
                 return entity < entities.size() && entities[entity].alive;
             }
 
-            [[nodiscard]] Version getVersion(Entity entity) const {
+            [[nodiscard]] Version getVersion(const Entity entity) const {
                 return entity < entities.size() ? entities[entity].version : 0;
             }
 
@@ -288,8 +278,10 @@ namespace ms {
         template<typename ...Components>
         class View {
         private:
+            using Entities = std::vector<Entity>;
+
             ComponentManager* cm;
-            std::vector<Entity> const& entities;
+            Entities const& entities;
 
             template<typename T>
             [[nodiscard]] auto& getEntitiesFromType() const {
@@ -313,8 +305,8 @@ namespace ms {
 
             class Iterator {
             private:
-                std::vector<Entity>::const_iterator entityIt;
-                std::vector<Entity>::const_iterator end;
+                Entities::const_iterator entityIt;
+                Entities::const_iterator end;
                 ComponentManager* cm;
 
                 void skipMissing() {
@@ -323,13 +315,13 @@ namespace ms {
                     }
                 }
 
-                [[nodiscard]] bool hasAllComponents(Entity entity) const {
+                [[nodiscard]] bool hasAllComponents(const Entity entity) const {
                     return (cm->hasComponent<Components>(entity) && ...);
                 }
             public:
                 Iterator(ComponentManager* mgr,
-                         std::vector<Entity>::const_iterator it,
-                         std::vector<Entity>::const_iterator endIt)
+                         const Entities::const_iterator it,
+                         const Entities::const_iterator endIt)
                     : entityIt(it), end(endIt), cm(mgr) {
                     skipMissing();
                 }
@@ -398,17 +390,17 @@ namespace ms {
             }
 
             template<typename T>
-            bool hasComponent(Entity entity) {
+            bool hasComponent(const Entity entity) {
                 return componentManager.hasComponent<T>(entity);
             }
 
             template<typename T>
-            T& getComponent(Entity entity) {
+            T& getComponent(const Entity entity) {
                 return componentManager.getComponent<T>(entity);
             }
 
             template<typename T>
-            void removeComponent(Entity entity) {
+            void removeComponent(const Entity entity) {
                 if (hasComponent<T>(entity)) {
                     componentManager.removeComponent<T>(entity);
                 }
@@ -418,7 +410,7 @@ namespace ms {
                 return entityManager.create();
             }
 
-            void destroyEntity(Entity entity) {
+            void destroyEntity(const Entity entity) {
                 if (!entityManager.isAlive(entity)) return;
                 componentManager.removeAllComponentsFromEntity(entity);
                 entityManager.destroy(entity);
@@ -442,7 +434,7 @@ namespace ms {
                 return ref;
             }
 
-            void update(float deltaTime) {
+            void update(float const deltaTime) const {
                 for (auto& system : systems) {
                     system->update(deltaTime);
                 }
