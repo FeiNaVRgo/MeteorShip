@@ -14,13 +14,12 @@ namespace ms::systems {
     private:
         Quadtree& m_quadtree;
     public:
-        void setEcs(ecs::ECS *_ecs) override {
-            ecs = _ecs;
-        }
+        explicit SpatialHash(Quadtree& quadtree) : m_quadtree(quadtree) {}
 
         void update(float deltaTime) override {
-            ecs->view<components::Rigidbody>().each([&](ecs::Entity& entity, components::Rigidbody& rigidbody) {
-
+            ecs->view<components::Rigidbody>()
+            .each([&](ecs::Entity& entity, components::Rigidbody& rigidbody) {
+                m_quadtree.update(entity, rigidbody.bounds);
             });
         }
     };
