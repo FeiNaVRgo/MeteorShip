@@ -18,7 +18,7 @@ namespace ms::systems {
 
         void update(float deltaTime) override {
             ecs->view<components::Rigidbody>()
-            .each([&](ecs::Entity& entity, components::Rigidbody& rigidbody) {
+            .each([&](ecs::Entity const& entity, components::Rigidbody& rigidbody) {
                 m_quadtree.update(entity, rigidbody.bounds);
             });
         }
