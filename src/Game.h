@@ -11,17 +11,19 @@
 #include "ECS/ECS.h"
 #include "Systems/SpatialHashing/Quadtree.h"
 #include "Systems/SpatialHashing/SpatialHash.h"
+#include "Utility/EventHandling.h"
 
 namespace ms {
     class Game {
-
-        ecs::ECS ecs;
-        sf::RenderWindow mainWindow;
-        systems::Quadtree m_quadtree;
+        ecs::ECS                ecs;
+        sf::RenderWindow        mainWindow;
+        systems::Quadtree       m_quadtree;
+        utility::EventHandling  eventHandler;
     public:
         Game() :
             mainWindow(sf::VideoMode({800, 600}), "My window", sf::Style::Default),
-            m_quadtree({{0.f, 0.f}, {static_cast<float>(mainWindow.getSize().x), static_cast<float>(mainWindow.getSize().y)}}) {
+            m_quadtree({{0.f, 0.f}, {static_cast<float>(mainWindow.getSize().x), static_cast<float>(mainWindow.getSize().y)}}),
+            eventHandler(*this) {
 
             mainWindow.setFramerateLimit(60);
 
@@ -29,7 +31,18 @@ namespace ms {
             ecs.registerComponent<components::Transform>();
 
             ecs.registerSystem<systems::SpatialHash>(m_quadtree);
+        }
 
+        auto getEcs() -> ecs::ECS& {
+            return ecs;
+        }
+
+        auto getMainWindow() -> sf::RenderWindow& {
+            return mainWindow;
+        }
+
+        auto getQuadtree() -> systems::Quadtree& {
+            return m_quadtree;
         }
 
         void draw() {
@@ -40,17 +53,19 @@ namespace ms {
             ecs.update(elapsed.asSeconds());
         }
 
+        void handleEvents() {
+            while (const auto event = mainWindow.pollEvent()) {
+                eventHandler.handleEvent(event);
+            }
+        }
+
         void run() {
             sf::Clock clock;
 
             while (mainWindow.isOpen()) {
                 sf::Time elapsed = clock.restart();
-                while (const auto event = mainWindow.pollEvent()) {
-                    if (event->is<sf::Event::Closed>()) {
-                        mainWindow.close();
-                    }
-                }
 
+                handleEvents();
                 update(elapsed);
 
                 mainWindow.clear(sf::Color::Black);
