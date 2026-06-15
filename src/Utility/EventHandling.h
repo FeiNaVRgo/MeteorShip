@@ -98,8 +98,8 @@ namespace ms::utility {
             return eventSignals.at(typeid(T).name()).connect(std::forward<Func>(func));
         }
 
-        void handleEvent(auto& event) {
-            event->visit(visitor);
+        decltype(auto) handleEvent(auto& event) {
+            return event->visit(visitor); // for sfml events and normal events
         }
 
     };
