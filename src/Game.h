@@ -11,7 +11,7 @@
 #include "ECS/ECS.h"
 #include "Systems/SpatialHashing/Quadtree.h"
 #include "Systems/SpatialHashing/SpatialHash.h"
-#include "Utility/EventHandling.h"
+#include "Events/EventHandling.h"
 
 namespace ms {
     class Game {

@@ -5,12 +5,9 @@
 #ifndef METEORSHIP_EVENTHANDLING_H
 #define METEORSHIP_EVENTHANDLING_H
 
-#include <iostream>
-#include <ostream>
-#include <string>
-#include <vector>
 #include <boost/signals2/signal.hpp>
 #include <SFML/Window/Event.hpp>
+#include <unordered_map>
 
 namespace ms {
     class Game;
@@ -63,7 +60,6 @@ namespace ms::utility {
 
             template<typename T>
             void operator()(T const& event) {}
-
         } visitor;
 
     public:
@@ -98,10 +94,9 @@ namespace ms::utility {
             return eventSignals.at(typeid(T).name()).connect(std::forward<Func>(func));
         }
 
-        decltype(auto) handleEvent(auto& event) {
+        decltype(auto) handleEvent(auto& event) const {
             return event->visit(visitor); // for sfml events and normal events
         }
-
     };
 }
 
