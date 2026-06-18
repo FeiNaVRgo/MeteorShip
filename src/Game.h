@@ -9,6 +9,7 @@
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
 #include "ECS/ECS.h"
+#include "Events/EventDispatcher.h"
 #include "Systems/SpatialHashing/Quadtree.h"
 #include "Systems/SpatialHashing/SpatialHash.h"
 #include "Events/EventHandling.h"
@@ -19,13 +20,15 @@ namespace ms {
         sf::RenderWindow        mainWindow;
         systems::Quadtree       m_quadtree;
         utility::EventHandling  eventHandler;
+        EventDispatcher         eventDispatcher;
     public:
         Game() :
             mainWindow(sf::VideoMode({800, 600}), "My window", sf::Style::Default),
             m_quadtree({{0.f, 0.f}, {static_cast<float>(mainWindow.getSize().x), static_cast<float>(mainWindow.getSize().y)}}),
             eventHandler(*this) {
-
             mainWindow.setFramerateLimit(60);
+
+            //eventHandler.bindToSignal<sf::Event::Closed>([]() {std::cout << "closing window" << std::endl;}); //for testing
 
             ecs.registerComponent<components::Rigidbody>();
             ecs.registerComponent<components::Transform>();
@@ -57,6 +60,10 @@ namespace ms {
             while (const auto event = mainWindow.pollEvent()) {
                 eventHandler.handleEvent(event);
             }
+
+            //while (const auto event = eventDispatcher.poll()) {
+            //    eventHandler.handleEvent(event);
+            //}
         }
 
         void run() {
