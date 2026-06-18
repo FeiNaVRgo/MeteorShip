@@ -49,6 +49,15 @@ namespace ms {
         }
 
         void draw() {
+            //how do I even handle drawing things qwq
+            //should I just have a queue of function that draw
+            //or have a general component called drawable?
+            //and based on it have a system dat just iterates
+            //over every entity with drawable component and then
+            //handle every entity properly
+            //but then how do I even model drawable class
+            //everything will be drawn on mainWindow probably qwq
+            //hmmm there is something called sf::VertexArrays
             m_quadtree.draw(mainWindow);
         }
 
@@ -61,9 +70,9 @@ namespace ms {
                 eventHandler.handleEvent(event);
             }
 
-            //while (const auto event = eventDispatcher.poll()) {
-            //    eventHandler.handleEvent(event);
-            //}
+            while (const auto event = eventDispatcher.poll()) {
+                eventHandler.handleEvent(event);
+            }
         }
 
         void run() {

@@ -18,18 +18,23 @@ namespace ms {
         //this is what sfml tutorial says about sf::WindowBase::pollEvent
         std::queue<std::optional<Event>> events{};
     public:
-        [[nodiscard]] constexpr decltype(auto) poll() {
+        [[nodiscard]] constexpr std::optional<Event> poll() {
             //I think we need to copy the event?
             //to not invalidate the reference or smth
+            if (events.empty()) return std::nullopt;
+
             const auto event = events.front();
             events.pop();
             return event;
         }
 
-        constexpr void  push(std::optional<Event> const event) {
+        constexpr void push(std::optional<Event> const event) {
             events.push(event);
         }
 
+        [[nodiscard]] constexpr bool empty() const {
+            return events.empty();
+        }
     };
 }
 
