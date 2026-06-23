@@ -5,6 +5,7 @@
 #ifndef METEORSHIP_EVENTHANDLING_H
 #define METEORSHIP_EVENTHANDLING_H
 
+#include <typeindex>
 #include <boost/signals2/signal.hpp>
 #include <SFML/Window/Event.hpp>
 #include <unordered_map>
@@ -20,7 +21,7 @@ namespace ms::utility {
     private:
         using Signature     = void();
         using Signal        = boost::signals2::signal<Signature>;
-        using EventSignals  = std::unordered_map<const char*, Signal>;
+        using EventSignals  = std::unordered_map<std::type_index, Signal>;
 
         using SFMLEvents    = std::variant<sf::Event::Closed,
                                            sf::Event::Resized,
@@ -57,8 +58,8 @@ namespace ms::utility {
 
             template<typename T>
             [[nodiscard]] std::optional<Signal&> getEventSignal() const {
-                if (!eventSignals.contains(typeid(T).name())) return std::nullopt;
-                return eventSignals.at(typeid(T).name());
+                if (!eventSignals.contains(typeid(T))) return std::nullopt;
+                return eventSignals.at(typeid(T));
             }
 
             //sfml events
@@ -108,7 +109,7 @@ namespace ms::utility {
 
         template<typename T, typename Func>
         decltype(auto) bindToSignal(Func&& func) {
-            return eventSignals.at(typeid(T).name()).connect(std::forward<Func>(func));
+            return eventSignals.at(typeid(T)).connect(std::forward<Func>(func));
         }
 
         template<typename Event>
@@ -119,7 +120,7 @@ namespace ms::utility {
         template<typename V, std::size_t I = 0>
         constexpr void initEventSignalsFromV() {
             if constexpr (I < std::variant_size_v<V>) {
-                eventSignals.emplace(typeid(std::variant_alternative_t<I, V>).name(), Signal{});
+                eventSignals.emplace(typeid(std::variant_alternative_t<I, V>), Signal{});
                 initEventSignalsFromV<V, I + 1>();
             }
         }

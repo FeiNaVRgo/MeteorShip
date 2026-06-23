@@ -19,8 +19,6 @@ namespace ms {
         std::queue<std::optional<Event>> events{};
     public:
         [[nodiscard]] constexpr std::optional<Event> poll() {
-            //I think we need to copy the event?
-            //to not invalidate the reference or smth
             if (events.empty()) return std::nullopt;
 
             const auto event = events.front();

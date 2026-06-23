@@ -16,6 +16,7 @@
 #include "ECS/ECS.h"
 
 namespace ms::systems {
+    //TODO: change those values
     static inline constexpr uint8_t MAX_ENTITIES_IN_NODE = 8;
     static inline constexpr uint8_t MAX_QUADTREE_DEPTH = 4;
 
@@ -29,22 +30,22 @@ namespace ms::systems {
     struct Node {
         sf::FloatRect bounds;
         Node* parent;
-        std::vector<std::unique_ptr<Node>> children;
-        std::optional<std::list<ecs::Entity>> entities;
+        std::vector<std::unique_ptr<Node>> children;//I could use array I think?
+        std::optional<std::list<ecs::Entity>> entities;//only leafs are allowed to have entities
         uint8_t depth;
 
-        explicit Node(Node* _parent = nullptr, uint8_t _depth = 0)
+        explicit Node(Node* _parent = nullptr, uint8_t const _depth = 0)
             : parent(_parent), depth(_depth) {
             entities.emplace();
         }
 
-        Node(ENodesChildren where, Node* _parent, const std::list<ecs::Entity>& _entities, uint8_t _depth, ecs::SparseSet<sf::FloatRect> const& boundsOfEntities)
+        Node(ENodesChildren const where, Node* _parent, const std::list<ecs::Entity>& _entities, uint8_t const _depth, ecs::SparseSet<sf::FloatRect> const& boundsOfEntities)
             : parent(_parent), depth(_depth) {
 
             if (parent) {
                 const auto& parentBounds = parent->bounds;
-                float halfWidth = parentBounds.size.x / 2.0f;
-                float halfHeight = parentBounds.size.y / 2.0f;
+                const float halfWidth = parentBounds.size.x / 2.0f;
+                const float halfHeight = parentBounds.size.y / 2.0f;
 
                 switch (where) {
                     case ENodesChildren::TopLeft:
@@ -88,8 +89,8 @@ namespace ms::systems {
         }
     };
 
+    //TODO: replace all findIntersection functions to isIntersecting as it requires much less computational power
     class Quadtree {
-    private:
         std::unique_ptr<Node> root;
         ecs::SparseSet<sf::FloatRect> sparse_set;
     public:
@@ -99,7 +100,7 @@ namespace ms::systems {
             root->bounds = bounds;
         }
 
-        Quadtree(float x, float y, float width, float height)
+        Quadtree(float const x, float const y, float const width, float const height)
             : worldBounds(sf::FloatRect(sf::Vector2f(x, y), sf::Vector2f(width, height))) {
             root = std::make_unique<Node>(nullptr, 0);
             root->bounds = worldBounds;
@@ -111,7 +112,7 @@ namespace ms::systems {
         Quadtree(Quadtree&&) = default;
         Quadtree& operator=(Quadtree&&) = default;
 
-        void insert(ecs::Entity entity, const sf::FloatRect& bounds) {
+        void insert(ecs::Entity const entity, sf::FloatRect const& bounds) {
             if (!root->bounds.findIntersection(bounds).has_value()) {
                 return;
             }
@@ -119,12 +120,12 @@ namespace ms::systems {
             insert(entity, bounds, root.get());
         }
 
-        void remove(ecs::Entity entity) {
+        void remove(ecs::Entity const entity) {
             remove(entity, root.get());
             sparse_set.remove(entity);
         }
 
-        void update(ecs::Entity entity, const sf::FloatRect& newBounds) {
+        void update(ecs::Entity const entity, sf::FloatRect const& newBounds) {
             if (sparse_set.get(entity) == newBounds) return;
             remove(entity);
             insert(entity, newBounds);
@@ -145,11 +146,11 @@ namespace ms::systems {
             root->bounds = worldBounds;
         }
 
-        void draw(sf::RenderTarget& renderTarget) {
+        void draw(sf::RenderTarget& renderTarget) const {
             draw(root.get(), renderTarget);
         }
     private:
-        void draw(Node* node, sf::RenderTarget& renderTarget) {
+        static void draw(Node const* node, sf::RenderTarget& renderTarget) {
             if (node->isLeaf()) {
                 drawRect(node->bounds, renderTarget);
             } else {
@@ -160,7 +161,7 @@ namespace ms::systems {
             }
         }
 
-        void drawRect(sf::FloatRect const& rect, sf::RenderTarget& renderTarget) {
+        static void drawRect(sf::FloatRect const& rect, sf::RenderTarget& renderTarget) {
             constexpr float thickness = 2.f;
             sf::RectangleShape rectangle;
             rectangle.setSize(sf::Vector2f(rect.size - sf::Vector2{thickness * 2.f, thickness * 2.f}));
@@ -224,11 +225,11 @@ namespace ms::systems {
             }
         }
 
-        bool canSplit(Node* node) {
+        static bool canSplit(Node const* node) {
             return node->entities->size() > MAX_ENTITIES_IN_NODE && node->depth < MAX_QUADTREE_DEPTH;
         }
 
-        bool canJoin(Node* node) const {
+        static bool canJoin(Node const* node) {
             if (!node || node->isLeaf()) return false;
 
             size_t totalEntities = 0;
@@ -251,7 +252,7 @@ namespace ms::systems {
             queue.push(node);
 
             while (!queue.empty()) {
-                auto* current = queue.front();
+                const auto* current = queue.front();
                 queue.pop();
 
                 if (current->isLeaf()) {
@@ -274,7 +275,7 @@ namespace ms::systems {
             return entities;
         }
 
-        void queryAll(Node* node, std::list<ecs::Entity>& result) const {
+        static void queryAll(Node const* node, std::list<ecs::Entity>& result) {
             if (node->isLeaf() && node->entities.has_value()) {
                 for (const auto &ent: *node->entities) {
                     result.push_back(ent);
@@ -308,7 +309,7 @@ namespace ms::systems {
             }
         }
 
-        void join(Node* node) {
+        static void join(Node* node) {
             node->entities.emplace();
             for (auto& child : node->children) {
                 if (child->isLeaf() && child->entities.has_value()) {

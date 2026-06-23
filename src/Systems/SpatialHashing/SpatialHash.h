@@ -10,7 +10,7 @@
 #include "Components/Rigidbody.h"
 
 namespace ms::systems {
-    class SpatialHash : public ms::ecs::System {
+    class SpatialHash : public ecs::System {
     private:
         Quadtree& m_quadtree;
     public:
@@ -18,7 +18,7 @@ namespace ms::systems {
 
         void update(float deltaTime) override {
             ecs->view<components::Rigidbody>()
-            .each([&](ecs::Entity const& entity, components::Rigidbody& rigidbody) {
+            .each([this](ecs::Entity const& entity, components::Rigidbody& rigidbody) {
                 m_quadtree.update(entity, rigidbody.bounds);
             });
         }

@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <memory>
 #include <ostream>
-#include <ranges>
 #include <string>
 #include <vector>
 #include <cassert>
@@ -231,6 +230,11 @@ namespace ms {
             };
 
             std::vector<EntityData> entities;
+            //entities vector will not shrink, if entity is to destroyed its only
+            //going to set alive to false and push free entity to use to stack
+            //using stack minimalizes amount of memory used at minimal cost
+            //versions are only there to count how many times an entity was
+            //reused, in other terms pulled from stack of free entities
             std::stack<Entity> freeList;
             size_t aliveCount = 0;
 
@@ -246,6 +250,9 @@ namespace ms {
                     aliveCount++;
                 } else {
                     entity = entities.size();
+                    //it can reallocate too much memory if we operate on MANY entities
+                    //IDK how urgent it is tho, I could probably use a mix of allocate
+                    //and/or shrink_to_fit
                     entities.emplace_back();
                     entities[entity].alive = true;
                     entities[entity].version = 0;
