@@ -6,6 +6,8 @@
 #define METEORSHIP_GAME_H
 
 #include <SFML/Graphics.hpp>
+
+#include "Components/Drawable.h"
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
 #include "ECS/ECS.h"
@@ -13,9 +15,12 @@
 #include "Systems/SpatialHashing/Quadtree.h"
 #include "Systems/SpatialHashing/SpatialHash.h"
 #include "Events/EventHandling.h"
+#include "Systems/Drawing/DrawingSystem.h"
 
 namespace ms {
     class Game {
+        //should we have some global values?
+        //like ecs and render window hmm
         ecs::ECS                ecs;
         sf::RenderWindow        mainWindow;
         systems::Quadtree       m_quadtree;
@@ -30,10 +35,17 @@ namespace ms {
 
             //eventHandler.bindToSignal<sf::Event::Closed>([]() {std::cout << "closing window" << std::endl;}); //for testing
 
+            //TODO: try to make a player entity with view on this entity :3
+            //TODO: loading textures
+            //TODO: loading shaders
+            //think about how to initialize them
+            //maybe have a class that is something like AssetHandler/Loader
             ecs.registerComponent<components::Rigidbody>();
             ecs.registerComponent<components::Transform>();
+            ecs.registerComponent<components::Drawable>();
 
             ecs.registerSystem<systems::SpatialHash>(m_quadtree);
+            ecs.registerSystem<systems::DrawingSystem>(mainWindow);
         }
 
         auto getEcs() -> ecs::ECS& {
