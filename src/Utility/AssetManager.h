@@ -6,33 +6,46 @@
 #define METEORSHIP_ASSETMANAGER_H
 #include <filesystem>
 #include <unordered_map>
+#include <vector>
+#include <SFML/Graphics/Shader.hpp>
 #include <SFML/Graphics/Texture.hpp>
 
 namespace ms::uti {
     class AssetManager {
         std::filesystem::path assetPath;
-        std::unordered_map<std::string, sf::Texture> textureMap;
+        static std::unordered_map<std::string, sf::Texture> textureMap;
+        static std::unordered_map<std::string, std::vector<sf::Shader>> shaderMap;
 
         explicit AssetManager() {
             assetPath = "./assets/";
         }
 
     public:
-        void loadTextures() {
+        void loadAssets() {
             for (auto it : assetPath) {
                 if (std::filesystem::exists(it)) {
                     if (std::filesystem::is_regular_file(it)) {
-                        if (it.extension() == ".png") {
-                            const auto texture = sf::Texture{it};
-                            textureMap[it.stem()] = texture;
-                        }
+                        loadTexture(it);
+                        loadShader(it);
                     }
                 }
             }
         }
 
-        void loadShaders() {
+        static void loadTexture(std::filesystem::path const& path) {
+            if (path.extension() == ".png") {
+                textureMap[path.stem()] = sf::Texture{path};
+            }
+        }
 
+        static void loadShader(std::filesystem::path const& path) {
+            if (path.extension() == ".vert") {
+                shaderMap[path.stem()].push_back(sf::Shader{path, sf::Shader::Type::Vertex});
+            } else if (path.extension() == ".frag") {
+                shaderMap[path.stem()].push_back(sf::Shader{path, sf::Shader::Type::Fragment});
+            } else if (path.extension() == ".geom") {
+                shaderMap[path.stem()].push_back(sf::Shader{path, sf::Shader::Type::Geometry});
+            }
         }
     };
 }
