@@ -18,7 +18,7 @@ namespace ms {
 
 namespace ms::utility {
     class EventHandling {
-    private:
+    public:
         using Signature     = void();
         using Signal        = boost::signals2::signal<Signature>;
         using EventSignals  = std::unordered_map<std::type_index, Signal>;
@@ -46,6 +46,7 @@ namespace ms::utility {
                                            sf::Event::TouchMoved,
                                            sf::Event::TouchEnded,
                                            sf::Event::SensorChanged>;
+    private:
 
         Game&           game;
         EventSignals    eventSignals{};
@@ -57,7 +58,7 @@ namespace ms::utility {
             explicit Visitor(EventSignals& eventSignals, Game& game) : game(game), eventSignals(eventSignals) {}
 
             template<typename T>
-            [[nodiscard]] std::optional<Signal&> getEventSignal() const {
+            [[nodiscard]] std::optional<std::reference_wrapper<Signal>> getEventSignal() const {
                 if (!eventSignals.contains(typeid(T))) return std::nullopt;
                 return eventSignals.at(typeid(T));
             }
@@ -96,7 +97,10 @@ namespace ms::utility {
             template<typename T>
             void operator()(T const& event) {
                 auto opt_sig = getEventSignal<std::remove_all_extents_t<T>>();
-                if (opt_sig.has_value()) (*opt_sig)();
+                if (opt_sig.has_value()) {
+                    auto& sig = opt_sig.value().get();
+                    sig();
+                }
                 handle(event);
             }
         } visitor;

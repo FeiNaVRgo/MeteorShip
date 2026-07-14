@@ -5,6 +5,7 @@
 #ifndef METEORSHIP_ECS_H
 #define METEORSHIP_ECS_H
 #include <algorithm>
+#include <array>
 #include <bitset>
 #include <cstdint>
 #include <memory>
