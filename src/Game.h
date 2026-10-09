@@ -6,7 +6,6 @@
 #define METEORSHIP_GAME_H
 
 #include <SFML/Graphics.hpp>
-
 #include "Components/Drawable.h"
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
@@ -15,7 +14,9 @@
 #include "Systems/SpatialHashing/Quadtree.h"
 #include "Systems/SpatialHashing/SpatialHash.h"
 #include "Events/EventHandling.h"
+#include "Events/EventSignalFactory.h"
 #include "Systems/Drawing/DrawingSystem.h"
+#include "Utility/AssetManager.h"
 
 namespace ms {
     class Game {
@@ -26,12 +27,15 @@ namespace ms {
         systems::Quadtree       m_quadtree;
         utility::EventHandling  eventHandler;
         EventDispatcher         eventDispatcher;
+        utility::AssetManager   assetManager;
     public:
         Game() :
             mainWindow(sf::VideoMode({800, 600}), "My window", sf::Style::Default),
             m_quadtree({{0.f, 0.f}, {static_cast<float>(mainWindow.getSize().x), static_cast<float>(mainWindow.getSize().y)}}),
             eventHandler(*this) {
             mainWindow.setFramerateLimit(60);
+
+            assetManager.loadAssets();
 
             //eventHandler.bindToSignal<sf::Event::Closed>([]() {std::cout << "closing window" << std::endl;}); //for testing
 
@@ -46,6 +50,37 @@ namespace ms {
 
             ecs.registerSystem<systems::SpatialHash>(m_quadtree);
             ecs.registerSystem<systems::DrawingSystem>(mainWindow);
+
+            utility::EventSignalFactory::createEventSignal<sf::Event::KeyReleased>(eventHandler, [](sf::Event::KeyReleased const& event) {
+                if (event.code == sf::Keyboard::Key::A) {
+                    std::cout << "A" << std::endl;
+                }
+            });
+            createPlayer();
+        }
+
+        void createPlayer() {
+            auto player = ecs.createEntity();
+
+            components::Transform transform{};
+            transform.setRotation(sf::degrees(0));
+            transform.setPosition(sf::Vector2f(mainWindow.getSize().x / 2.f, mainWindow.getSize().y / 2.f));
+            ecs.addComponent<components::Transform>(player, transform);
+
+            components::Drawable drawable{};
+            sf::VertexArray triangle(sf::PrimitiveType::Triangles, 3);
+
+            triangle[0].position = sf::Vector2f(10.f, 10.f);
+            triangle[1].position = sf::Vector2f(100.f, 10.f);
+            triangle[2].position = sf::Vector2f(100.f, 100.f);
+
+            triangle[0].color = sf::Color::Red;
+            triangle[1].color = sf::Color::Blue;
+            triangle[2].color = sf::Color::Green;
+
+            drawable.vertices = triangle;
+
+            ecs.addComponent<components::Drawable>(player, drawable);
         }
 
         auto getEcs() -> ecs::ECS& {
@@ -94,10 +129,10 @@ namespace ms {
                 sf::Time elapsed = clock.restart();
 
                 handleEvents();
-                update(elapsed);
 
                 mainWindow.clear(sf::Color::Black);
                 draw();
+                update(elapsed);
                 mainWindow.display();
             }
         }

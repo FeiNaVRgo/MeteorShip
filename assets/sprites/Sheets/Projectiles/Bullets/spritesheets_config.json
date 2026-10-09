@@ -1,0 +1,13 @@
+[
+  {
+      "name": "Bullets-spritesheet",
+      "width": 32,
+      "height": 32,
+      "number_of_sprites": 2
+  },
+  {
+    "name": "wroof",
+    "width": 12,
+    "height": 12
+  }
+]

@@ -22,7 +22,9 @@ namespace ms::systems {
                 [this](ecs::Entity const& entity, components::Transform& transform, components::Drawable& drawable) {
                     sf::RenderStates states = sf::RenderStates::Default;
                     states.transform *= transform.getTransform();
-                    renderWindow.draw(drawable.vertices, states);
+
+                    if (drawable.vertices.has_value()) renderWindow.draw(drawable.vertices.value(), states);
+                    if (drawable.sprite.has_value()) renderWindow.draw(drawable.sprite.value(), states);
             });
         }
     };

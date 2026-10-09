@@ -19,7 +19,7 @@ namespace ms {
 namespace ms::utility {
     class EventHandling {
     private:
-        using Signature     = void();
+        using Signature     = void(void*);
         using Signal        = boost::signals2::signal<Signature>;
         using EventSignals  = std::unordered_map<std::type_index, Signal>;
 
@@ -96,7 +96,7 @@ namespace ms::utility {
             template<typename T>
             void operator()(T const& event) {
                 auto opt_sig = getEventSignal<std::remove_all_extents_t<T>>();
-                if (opt_sig.has_value()) (*opt_sig)();
+                if (opt_sig.has_value()) (*opt_sig)((void*)(&event));
                 handle(event);
             }
         } visitor;
