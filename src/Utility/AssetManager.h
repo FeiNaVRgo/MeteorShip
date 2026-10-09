@@ -61,14 +61,19 @@ namespace ms::utility {
 
                 std::stringstream ss;
                 ss << file.rdbuf();
-                boost::json::value val = boost::json::parse(ss.str());
 
-                auto sprite_object = val.at(0).as_object();
-                auto name_as_val = sprite_object["name"];
-                auto name = name_as_val.as_string();
+                for (boost::json::value json = boost::json::parse(ss.str()); auto it : json.as_array()) {
+                    boost::json::object sprite_object = it.as_object();
+                    boost::json::value name_as_val = sprite_object["name"];
+                    boost::json::string name = name_as_val.as_string();
 
-                std::cout << name << std::endl;
+                    std::string png_sheet_name = std::string(name.c_str()).append(".png");
+                    //we are using parent path bc in every directory where are actual sprites will be a json file to configure them
+                    auto texture = sf::Texture(path.parent_path().append(png_sheet_name));
+                    auto sprite = sf::Sprite(texture);
 
+                    spriteMap.emplace(name, sprite);
+                }
             }
         }
     };
