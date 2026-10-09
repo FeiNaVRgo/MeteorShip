@@ -57,7 +57,7 @@ namespace ms::utility {
             explicit Visitor(EventSignals& eventSignals, Game& game) : game(game), eventSignals(eventSignals) {}
 
             template<typename T>
-            [[nodiscard]] std::optional<Signal&> getEventSignal() const {
+            [[nodiscard]] std::optional<std::reference_wrapper<Signal>> getEventSignal() const {
                 if (!eventSignals.contains(typeid(T))) return std::nullopt;
                 return eventSignals.at(typeid(T));
             }
@@ -96,7 +96,10 @@ namespace ms::utility {
             template<typename T>
             void operator()(T const& event) {
                 auto opt_sig = getEventSignal<std::remove_all_extents_t<T>>();
-                if (opt_sig.has_value()) (*opt_sig)((void*)(&event));
+                if (opt_sig.has_value()) {
+                    auto& sig = opt_sig.value().get();
+                    sig((void*)(&event));
+                }
                 handle(event);
             }
         } visitor;

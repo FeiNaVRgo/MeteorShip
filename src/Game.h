@@ -68,6 +68,7 @@ namespace ms {
             ecs.addComponent<components::Transform>(player, transform);
 
             components::Drawable drawable{};
+            /*
             sf::VertexArray triangle(sf::PrimitiveType::Triangles, 3);
 
             triangle[0].position = sf::Vector2f(10.f, 10.f);
@@ -79,7 +80,8 @@ namespace ms {
             triangle[2].color = sf::Color::Green;
 
             drawable.vertices = triangle;
-
+            */
+            drawable.sprite = sf::Sprite(assetManager.textureMap.at("Bullets-spritesheet"));
             ecs.addComponent<components::Drawable>(player, drawable);
         }
 
