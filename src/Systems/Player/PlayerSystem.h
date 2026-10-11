@@ -18,14 +18,14 @@ namespace ms::systems {
         public:
         void update(float deltaTime) override {
             ecs->view<components::Player, components::Transform>().each(
-                [](ecs::Entity const& entity, components::Player& player ,components::Transform& transform)
+                [deltaTime](ecs::Entity const& entity, components::Player& player ,components::Transform& transform)
                 {
                     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) {
                         auto const offset = sf::Vector2f
-                        {
+                        (
                             std::sin(transform.getRotation().asRadians()),
                             -std::cos(transform.getRotation().asRadians())
-                        }.normalized();
+                        ).normalized();
                         transform.move(offset);
                     }
                     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {

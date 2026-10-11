@@ -14,33 +14,44 @@ namespace ms::utility {
     struct AnimatedSprite {
         sf::Sprite sprite;
         sf::IntRect rect;
-        int number_of_frames;
+        int number_of_sprites;
         sf::Clock clock;
-        std::optional<std::vector<int>> frame_order;
+        std::optional<std::vector<int>> order_of_sprites;
+        int i = 0;
 
         //TODO:
         //one sprite sheet
         //idle animation + movement animation
 
-        AnimatedSprite(sf::Texture const& texture, sf::IntRect const _rect, int const _number_of_frames)
+        AnimatedSprite(sf::Texture const& texture,
+                       sf::IntRect const _rect,
+                       int const _number_of_sprites,
+                       std::optional<std::vector<int>> const& _order_of_sprites)
             : sprite(texture),
               rect(_rect),
-              number_of_frames(_number_of_frames)
+              number_of_sprites(_number_of_sprites),
+              order_of_sprites(_order_of_sprites)
         {
             sprite.setTextureRect(rect);
             sprite.setOrigin(sprite.getLocalBounds().getCenter());
         }
 
-        //TODO:
-        //i need to change how i move the rect, it goes 1 -> 2 -> 3 -> 1...,
-        //and what if i need a custom way to go by frames like
-        //1 -> 2 -> 3 -> 2 -> -> 1 or 1 -> 3 -> 1 -> 2 -> 1 ...
         void update() {
             if (clock.getElapsedTime().asSeconds() > 1.0f) {
-                if (rect.position.x == rect.size.x * (number_of_frames - 1)) {
-                    rect.position.x = 0;
+                if (!order_of_sprites.has_value()) {
+                    if (rect.position.x == rect.size.x * ( number_of_sprites - 1)) {
+                        rect.position.x = 0;
+                    } else {
+                        rect.position.x += rect.size.x;
+                    }
                 } else {
-                    rect.position.x += rect.size.x;
+                    auto const& vec = order_of_sprites.value();
+                    rect.position.x = rect.size.x * vec[i];
+                    if (i == vec.size() - 1) {
+                        i = 0;
+                    } else {
+                        i++;
+                    }
                 }
 
                 sprite.setTextureRect(rect);

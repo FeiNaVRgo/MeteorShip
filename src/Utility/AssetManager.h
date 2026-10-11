@@ -80,14 +80,25 @@ namespace ms::utility {
                           {static_cast<int>(width_as_val.as_int64()), static_cast<int>(height_as_val.as_int64())}
                           );
 
+                    auto try_order_of_sprites = sprite_object["order_of_sprites"].try_as_array();
+                    std::optional<std::vector<int>> order_of_sprites = std::nullopt;
+                    if (try_order_of_sprites.has_value()) {
+                        order_of_sprites = std::vector<int>();
+                        for (auto const& value : try_order_of_sprites.value()) {
+                            order_of_sprites.value().emplace_back(value.as_int64());
+                        }
+                    }
+
                     auto const& [itt, is_inserted] = textureMap.emplace(name, sf::Texture(
                         path.parent_path().append(png_sheet_name)
                         ));
+
                     if (is_inserted) {
                         spriteMap.emplace(name, AnimatedSprite(
                             itt->second,
                             rect,
-                            static_cast<int>(sprite_object["number_of_sprites"].as_int64())
+                            static_cast<int>(sprite_object["number_of_sprites"].as_int64()),
+                            order_of_sprites
                         ));
                     }
                 }
