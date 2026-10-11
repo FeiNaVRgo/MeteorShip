@@ -13,13 +13,15 @@
 #include <SFML/Graphics/Sprite.hpp>
 #include <boost/json.hpp>
 
+#include "AnimatedSprite.h"
+
 namespace ms::utility {
     class AssetManager {
         std::string assetPath;
     public:
         std::unordered_map<std::string, std::vector<sf::Shader>> shaderMap;
         std::unordered_map<std::string, sf::Texture> textureMap;//used for spritesheets usually
-
+        std::unordered_map<std::string, AnimatedSprite> spriteMap;
         // change of plans
         // i will just load spritesheets
         // and have a json that specifies how to use them
@@ -78,11 +80,16 @@ namespace ms::utility {
                           {static_cast<int>(width_as_val.as_int64()), static_cast<int>(height_as_val.as_int64())}
                           );
 
-                    textureMap.emplace(name, sf::Texture(
-                        path.parent_path().append(png_sheet_name),
-                           false,
-                                rect
+                    auto const& [itt, is_inserted] = textureMap.emplace(name, sf::Texture(
+                        path.parent_path().append(png_sheet_name)
                         ));
+                    if (is_inserted) {
+                        spriteMap.emplace(name, AnimatedSprite(
+                            itt->second,
+                            rect,
+                            static_cast<int>(sprite_object["number_of_sprites"].as_int64())
+                        ));
+                    }
                 }
             }
         }

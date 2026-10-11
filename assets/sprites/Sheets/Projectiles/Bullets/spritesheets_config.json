@@ -1,8 +1,8 @@
 [
   {
       "name": "Bullets-spritesheet",
-      "width": 32,
-      "height": 32,
+      "width": 8,
+      "height": 8,
       "number_of_sprites": 2
   }
 ]

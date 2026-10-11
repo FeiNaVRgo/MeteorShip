@@ -24,7 +24,11 @@ namespace ms::systems {
                     states.transform *= transform.getTransform();
 
                     if (drawable.vertices.has_value()) renderWindow.draw(drawable.vertices.value(), states);
-                    if (drawable.sprite.has_value()) renderWindow.draw(drawable.sprite.value(), states);
+                    if (drawable.sprite.has_value()) {
+                        auto& animated_sprite = drawable.sprite.value();
+                        renderWindow.draw(animated_sprite.sprite, states);
+                        animated_sprite.update();
+                    }
             });
         }
     };

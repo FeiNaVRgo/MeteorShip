@@ -9,6 +9,7 @@
 #include "Components/Drawable.h"
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
+#include "Components/Player.h"
 #include "ECS/ECS.h"
 #include "Events/EventDispatcher.h"
 #include "Systems/SpatialHashing/Quadtree.h"
@@ -16,12 +17,11 @@
 #include "Events/EventHandling.h"
 #include "Events/EventSignalFactory.h"
 #include "Systems/Drawing/DrawingSystem.h"
+#include "Systems/Player/PlayerSystem.h"
 #include "Utility/AssetManager.h"
 
 namespace ms {
     class Game {
-        //should we have some global values?
-        //like ecs and render window hmm
         ecs::ECS                ecs;
         sf::RenderWindow        mainWindow;
         systems::Quadtree       m_quadtree;
@@ -47,20 +47,19 @@ namespace ms {
             ecs.registerComponent<components::Rigidbody>();
             ecs.registerComponent<components::Transform>();
             ecs.registerComponent<components::Drawable>();
+            ecs.registerComponent<components::Player>();
 
             ecs.registerSystem<systems::SpatialHash>(m_quadtree);
             ecs.registerSystem<systems::DrawingSystem>(mainWindow);
+            ecs.registerSystem<systems::PlayerSystem>();
 
-            utility::EventSignalFactory::createEventSignal<sf::Event::KeyReleased>(eventHandler, [](sf::Event::KeyReleased const& event) {
-                if (event.code == sf::Keyboard::Key::A) {
-                    std::cout << "A" << std::endl;
-                }
-            });
             createPlayer();
         }
 
         void createPlayer() {
-            auto player = ecs.createEntity();
+            auto const player = ecs.createEntity();
+
+            ecs.addComponent<components::Player>(player);
 
             components::Transform transform{};
             transform.setRotation(sf::degrees(0));
@@ -68,20 +67,7 @@ namespace ms {
             ecs.addComponent<components::Transform>(player, transform);
 
             components::Drawable drawable{};
-            /*
-            sf::VertexArray triangle(sf::PrimitiveType::Triangles, 3);
-
-            triangle[0].position = sf::Vector2f(10.f, 10.f);
-            triangle[1].position = sf::Vector2f(100.f, 10.f);
-            triangle[2].position = sf::Vector2f(100.f, 100.f);
-
-            triangle[0].color = sf::Color::Red;
-            triangle[1].color = sf::Color::Blue;
-            triangle[2].color = sf::Color::Green;
-
-            drawable.vertices = triangle;
-            */
-            drawable.sprite = sf::Sprite(assetManager.textureMap.at("Bullets-spritesheet"));
+            drawable.sprite = assetManager.spriteMap.at("JetFighter-Var3-Spritesheet");
             ecs.addComponent<components::Drawable>(player, drawable);
         }
 
@@ -98,15 +84,6 @@ namespace ms {
         }
 
         void draw() {
-            //how do I even handle drawing things qwq
-            //should I just have a queue of function that draw
-            //or have a general component called drawable?
-            //and based on it have a system dat just iterates
-            //over every entity with drawable component and then
-            //handle every entity properly
-            //but then how do I even model drawable class
-            //everything will be drawn on mainWindow probably qwq
-            //hmmm there is something called sf::VertexArrays
             m_quadtree.draw(mainWindow);
         }
 
