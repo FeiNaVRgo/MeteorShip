@@ -37,13 +37,6 @@ namespace ms {
 
             assetManager.loadAssets();
 
-            //eventHandler.bindToSignal<sf::Event::Closed>([]() {std::cout << "closing window" << std::endl;}); //for testing
-
-            //TODO: try to make a player entity with view on this entity :3
-            //TODO: loading textures
-            //TODO: loading shaders
-            //think about how to initialize them
-            //maybe have a class that is something like AssetHandler/Loader
             ecs.registerComponent<components::Rigidbody>();
             ecs.registerComponent<components::Transform>();
             ecs.registerComponent<components::Drawable>();
@@ -92,11 +85,11 @@ namespace ms {
         }
 
         void handleEvents() {
-            while (const auto event = mainWindow.pollEvent()) {
+            while (auto const event = mainWindow.pollEvent()) {
                 eventHandler.handleEvent(event);
             }
 
-            while (const auto event = eventDispatcher.poll()) {
+            while (auto const event = eventDispatcher.poll()) {
                 eventHandler.handleEvent(event);
             }
         }
@@ -110,8 +103,10 @@ namespace ms {
                 handleEvents();
 
                 mainWindow.clear(sf::Color::Black);
+
                 draw();
                 update(elapsed);
+
                 mainWindow.display();
             }
         }

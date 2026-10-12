@@ -47,14 +47,13 @@ namespace ms::utility {
                                            sf::Event::TouchEnded,
                                            sf::Event::SensorChanged>;
 
-        Game&           game;
         EventSignals    eventSignals{};
 
         struct Visitor {
-            Game&           game;
             EventSignals&   eventSignals;
+            Game&           game;
 
-            explicit Visitor(EventSignals& eventSignals, Game& game) : game(game), eventSignals(eventSignals) {}
+            explicit Visitor(EventSignals& eventSignals, Game& _game) : eventSignals(eventSignals), game(_game) {}
 
             template<typename T>
             [[nodiscard]] std::optional<std::reference_wrapper<Signal>> getEventSignal() const {
@@ -95,8 +94,7 @@ namespace ms::utility {
 
             template<typename T>
             void operator()(T const& event) {
-                auto opt_sig = getEventSignal<std::remove_all_extents_t<T>>();
-                if (opt_sig.has_value()) {
+                if (auto opt_sig = getEventSignal<std::remove_all_extents_t<T>>(); opt_sig.has_value()) {
                     auto& sig = opt_sig.value().get();
                     sig((void*)(&event));
                 }
@@ -105,7 +103,7 @@ namespace ms::utility {
         } visitor;
 
     public:
-        explicit EventHandling(Game& game) : game(game), visitor(eventSignals, game) {
+        explicit EventHandling(Game& game) : visitor(eventSignals, game) {
             initEventSignalsFromV<SFMLEvents>();//sfml events
             initEventSignalsFromV<Event::events_t>();//game events
         }
