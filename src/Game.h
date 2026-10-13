@@ -18,6 +18,7 @@
 #include "Events/EventHandling.h"
 #include "Events/EventSignalFactory.h"
 #include "Systems/Drawing/DrawingSystem.h"
+#include "Systems/Physics/MovementSystem.h"
 #include "Systems/Player/PlayerSystem.h"
 #include "Utility/AssetManager.h"
 
@@ -47,18 +48,43 @@ namespace ms {
             ecs.registerSystem<systems::SpatialHash>(m_quadtree);
             ecs.registerSystem<systems::DrawingSystem>(mainWindow);
             ecs.registerSystem<systems::PlayerSystem>(eventDispatcher);
+            ecs.registerSystem<systems::MovementSystem>();
 
             utility::EventSignalFactory::createEventSignal<Event::PlayerShot>(eventHandler, [this](Event::PlayerShot const& event) {
-                createPlayerBullet();
+                createPlayerBullet(event.player);
             });
 
             createPlayer();
         }
 
-        void createPlayerBullet() {
+        void createPlayerBullet(ecs::Entity player) {
             auto const bullet = ecs.createEntity();
 
+            auto const& p_transform = ecs.getComponent<components::Transform>(player);
 
+            components::Transform transform{};
+            transform.setRotation(p_transform.getRotation());
+            transform.setPosition(p_transform.getPosition());
+            ecs.addComponent<components::Transform>(bullet, transform);
+
+            components::Drawable drawable{};
+            drawable.sprite = assetManager.spriteMap.at("Bullets-spritesheet");
+            ecs.addComponent<components::Drawable>(bullet, drawable);
+
+            components::Rigidbody rigidbody{};
+            auto rect = drawable.sprite.value().sprite.getLocalBounds();
+            rect.position = transform.getPosition();
+            rigidbody.bounds = rect;
+
+            rigidbody.velocity = sf::Vector2f
+                        (
+                            std::sin(transform.getRotation().asRadians()),
+                            -std::cos(transform.getRotation().asRadians())
+                        ).normalized();
+
+            ecs.addComponent<components::Rigidbody>(bullet, rigidbody);
+
+            m_quadtree.insert(bullet, rigidbody.bounds);
         }
 
         void createPlayer() {

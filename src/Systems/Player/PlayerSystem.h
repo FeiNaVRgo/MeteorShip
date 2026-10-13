@@ -20,26 +20,22 @@ namespace ms::systems {
         explicit  PlayerSystem(EventDispatcher& eventDispatcher) : eventDispatcher(eventDispatcher) {}
 
         void update(float deltaTime) override {
-            ecs->view<components::Player, components::Transform, components::ShootingAccess, components::Rigidbody, components::Drawable>().each(
-                [this](ecs::Entity const& entity,
-                            components::Player& player,
-                            components::Transform& transform,
-                            components::ShootingAccess& shootingAccess,
-                            components::Rigidbody& rigidbody,
-                            components::Drawable& drawable)
+            ecs->view<components::Player, components::Transform, components::ShootingAccess, components::Rigidbody, components::Drawable>()
+                .each([this](ecs::Entity const& entity,
+                                  components::Player& player,
+                                  components::Transform& transform,
+                                  components::ShootingAccess& shootingAccess,
+                                  components::Rigidbody& rigidbody,
+                                  components::Drawable& drawable)
                 {
                     //TODO:
                     //now will something have a rigidbody but not transform or drawable?
                     //if yes we need to find a way to keep it updated somehow
                     //for every entity that moves
 
-                    auto rect = drawable.sprite.value().sprite.getLocalBounds();
-                    rect.position = transform.getPosition();;
-                    rigidbody.bounds = rect;
-
                     if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
                         if (shootingAccess.shootingClock.getElapsedTime().asSeconds() >= shootingAccess.shootingInterval) {
-                            eventDispatcher.push(Event(Event::PlayerShot()));
+                            eventDispatcher.push(Event(Event::PlayerShot(entity)));
                             shootingAccess.shootingClock.restart();
                         }
                     }

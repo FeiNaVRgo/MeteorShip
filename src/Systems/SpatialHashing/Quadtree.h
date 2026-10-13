@@ -17,7 +17,7 @@
 
 namespace ms::systems {
     //TODO: change those values
-    static inline constexpr uint8_t MAX_ENTITIES_IN_NODE = 8;
+    static inline constexpr uint8_t MAX_ENTITIES_IN_NODE = 1;
     static inline constexpr uint8_t MAX_QUADTREE_DEPTH = 4;
 
     enum class ENodesChildren : uint8_t {
@@ -126,7 +126,6 @@ namespace ms::systems {
         }
 
         void update(ecs::Entity const entity, sf::FloatRect const& newBounds) {
-            if (sparse_set.get(entity) == newBounds) return;
             remove(entity);
             insert(entity, newBounds);
         }
@@ -211,7 +210,7 @@ namespace ms::systems {
                     }
                 } else {
                     for (const auto& child : current->children) {
-                        if (child->bounds.findIntersection(sparse_set.get(entity)).has_value()) {
+                        if (sparse_set.has(entity) && child->bounds.findIntersection(sparse_set.get(entity)).has_value()) {
                             queue.push(child.get());
                         }
                     }

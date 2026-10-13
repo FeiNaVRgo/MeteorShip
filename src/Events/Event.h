@@ -15,7 +15,9 @@ namespace ms {
             ecs::Entity entity;
         };
 
-        struct PlayerShot {};
+        struct PlayerShot {
+            ecs::Entity player;
+        };
 
         using events_t = std::variant<RemoveEntity,
                                       PlayerShot>;
