@@ -73,7 +73,6 @@ namespace ms {
 
             template<typename ...Args>
             T& emplace(Entity const entity, Args&& ...args) {
-                std::cout << std::endl;
                 if (has(entity)) {
                     T& comp = components[sparse[entity]];
                     comp = T(std::forward<Args>(args)...);

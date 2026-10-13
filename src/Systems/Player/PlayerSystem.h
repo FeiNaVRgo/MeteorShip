@@ -28,11 +28,6 @@ namespace ms::systems {
                                   components::Rigidbody& rigidbody,
                                   components::Drawable& drawable)
                 {
-                    //TODO:
-                    //now will something have a rigidbody but not transform or drawable?
-                    //if yes we need to find a way to keep it updated somehow
-                    //for every entity that moves
-
                     if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
                         if (shootingAccess.shootingClock.getElapsedTime().asSeconds() >= shootingAccess.shootingInterval) {
                             eventDispatcher.push(Event(Event::PlayerShot(entity)));

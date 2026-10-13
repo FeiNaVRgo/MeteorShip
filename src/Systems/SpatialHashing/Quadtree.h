@@ -16,7 +16,6 @@
 #include "ECS/ECS.h"
 
 namespace ms::systems {
-    //TODO: change those values
     static inline constexpr uint8_t MAX_ENTITIES_IN_NODE = 1;
     static inline constexpr uint8_t MAX_QUADTREE_DEPTH = 4;
 
@@ -149,17 +148,6 @@ namespace ms::systems {
             draw(root.get(), renderTarget);
         }
     private:
-        static void draw(Node const* node, sf::RenderTarget& renderTarget) {
-            if (node->isLeaf()) {
-                drawRect(node->bounds, renderTarget);
-            } else {
-                drawRect(node->bounds, renderTarget);
-                for (const auto& child : node->children) {
-                    draw(child.get(), renderTarget);
-                }
-            }
-        }
-
         static void drawRect(sf::FloatRect const& rect, sf::RenderTarget& renderTarget) {
             constexpr float thickness = 2.f;
             sf::RectangleShape rectangle;
@@ -169,6 +157,17 @@ namespace ms::systems {
             rectangle.setOutlineThickness(thickness);
             rectangle.setPosition(rect.position + sf::Vector2(thickness, thickness));
             renderTarget.draw(rectangle);
+        }
+
+        static void draw(Node const* node, sf::RenderTarget& renderTarget) {
+            if (node->isLeaf()) {
+                drawRect(node->bounds, renderTarget);
+            } else {
+                drawRect(node->bounds, renderTarget);
+                for (const auto& child : node->children) {
+                    draw(child.get(), renderTarget);
+                }
+            }
         }
 
         void insert(ecs::Entity entity, const sf::FloatRect& bounds, Node* node) {

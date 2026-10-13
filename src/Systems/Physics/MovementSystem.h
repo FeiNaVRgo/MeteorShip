@@ -22,7 +22,7 @@ namespace ms::systems {
                         rigidbody.velocity += rigidbody.acceleration;
                         transform.move(rigidbody.velocity);
 
-                        rigidbody.bounds.position = transform.getPosition();
+                        rigidbody.bounds.position = transform.getPosition() - rigidbody.bounds.size / 2.f;
                     }
             );
         }

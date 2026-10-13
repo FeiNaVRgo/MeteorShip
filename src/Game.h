@@ -45,13 +45,18 @@ namespace ms {
             ecs.registerComponent<components::Player>();
             ecs.registerComponent<components::ShootingAccess>();
 
-            ecs.registerSystem<systems::SpatialHash>(m_quadtree);
+            ecs.registerSystem<systems::SpatialHash>(m_quadtree, eventDispatcher);
             ecs.registerSystem<systems::DrawingSystem>(mainWindow);
             ecs.registerSystem<systems::PlayerSystem>(eventDispatcher);
             ecs.registerSystem<systems::MovementSystem>();
 
             utility::EventSignalFactory::createEventSignal<Event::PlayerShot>(eventHandler, [this](Event::PlayerShot const& event) {
+                // should i move it to separate event?
+                // something like player bullet created or something idk idk
                 createPlayerBullet(event.player);
+            });
+            utility::EventSignalFactory::createEventSignal<Event::RemoveEntity>(eventHandler, [this](Event::RemoveEntity const& event) {
+               ecs.destroyEntity(event.entity);
             });
 
             createPlayer();
