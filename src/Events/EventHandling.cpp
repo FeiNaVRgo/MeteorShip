@@ -32,3 +32,4 @@ void ms::utility::EventHandling::Visitor::handle(sf::Event::TouchMoved const &ev
 void ms::utility::EventHandling::Visitor::handle(sf::Event::TouchEnded const &event) {}
 void ms::utility::EventHandling::Visitor::handle(sf::Event::SensorChanged const &event) {}
 void ms::utility::EventHandling::Visitor::handle(Event::RemoveEntity const &event) {}
+void ms::utility::EventHandling::Visitor::handle(Event::PlayerShot const& event) {}

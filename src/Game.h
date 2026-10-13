@@ -10,6 +10,7 @@
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
 #include "Components/Player.h"
+#include "Components/ShootingAccess.h"
 #include "ECS/ECS.h"
 #include "Events/EventDispatcher.h"
 #include "Systems/SpatialHashing/Quadtree.h"
@@ -41,18 +42,30 @@ namespace ms {
             ecs.registerComponent<components::Transform>();
             ecs.registerComponent<components::Drawable>();
             ecs.registerComponent<components::Player>();
+            ecs.registerComponent<components::ShootingAccess>();
 
             ecs.registerSystem<systems::SpatialHash>(m_quadtree);
             ecs.registerSystem<systems::DrawingSystem>(mainWindow);
-            ecs.registerSystem<systems::PlayerSystem>();
+            ecs.registerSystem<systems::PlayerSystem>(eventDispatcher);
+
+            utility::EventSignalFactory::createEventSignal<Event::PlayerShot>(eventHandler, [this](Event::PlayerShot const& event) {
+                createPlayerBullet();
+            });
 
             createPlayer();
+        }
+
+        void createPlayerBullet() {
+            auto const bullet = ecs.createEntity();
+
+
         }
 
         void createPlayer() {
             auto const player = ecs.createEntity();
 
             ecs.addComponent<components::Player>(player);
+            ecs.addComponent<components::ShootingAccess>(player, components::ShootingAccess(1.f));
 
             components::Transform transform{};
             transform.setRotation(sf::degrees(0));
@@ -62,6 +75,14 @@ namespace ms {
             components::Drawable drawable{};
             drawable.sprite = assetManager.spriteMap.at("JetFighter-Var3-Spritesheet");
             ecs.addComponent<components::Drawable>(player, drawable);
+
+            components::Rigidbody rigidbody{};
+            auto rect = drawable.sprite.value().sprite.getLocalBounds();
+            rect.position = transform.getPosition();
+            rigidbody.bounds = rect;
+            ecs.addComponent<components::Rigidbody>(player, rigidbody);
+
+            m_quadtree.insert(player, rigidbody.bounds);
         }
 
         auto getEcs() -> ecs::ECS& {

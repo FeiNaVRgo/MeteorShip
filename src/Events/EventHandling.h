@@ -88,6 +88,7 @@ namespace ms::utility {
 
             //now in game events
             void handle(Event::RemoveEntity const& event);
+            void handle(Event::PlayerShot const& event);
 
             template<typename T>//for all unhandled types
             void handle(T const& event) {}

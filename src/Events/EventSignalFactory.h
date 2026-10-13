@@ -4,7 +4,6 @@
 
 #ifndef METEORSHIP_EVENTSIGNALFACTORY_H
 #define METEORSHIP_EVENTSIGNALFACTORY_H
-#include <functional>
 
 #include "EventHandling.h"
 
