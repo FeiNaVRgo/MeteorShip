@@ -10,9 +10,7 @@
 namespace ms::scene_logic::scenes {
     class SceneMain : public SceneBase {
     public:
-        explicit SceneMain(Game& game)
-            : SceneBase(game, "main") {
-        }
+        explicit SceneMain(Game& game, std::string name);
 
         void init() override;
         void destroy() override;

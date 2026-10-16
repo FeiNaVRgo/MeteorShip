@@ -5,9 +5,11 @@
 #ifndef METEORSHIP_SCENEBASE_H
 #define METEORSHIP_SCENEBASE_H
 
-#include <utility>
 #include <string>
-#include "../../Game.h"
+
+namespace ms {
+    class Game;
+}
 
 namespace ms::scene_logic::scenes {
     class SceneBase {
@@ -16,13 +18,13 @@ namespace ms::scene_logic::scenes {
         Game& game;
         std::string name;
     public:
-        explicit SceneBase(Game& game, std::string name) : game(game), name(std::move(name)) {}
-        virtual ~SceneBase() = default;
+        SceneBase(Game &game, std::string name);
+        //virtual ~SceneBase() = default;
 
         std::string const& getName() { return name; }
-        virtual void init();
-        virtual void destroy();
-        virtual void update();
+        virtual void init() = 0;
+        virtual void destroy() = 0;
+        virtual void update() = 0;
     };
 }
 
