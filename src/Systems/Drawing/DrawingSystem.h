@@ -15,7 +15,7 @@ namespace ms::systems {
     class DrawingSystem : public ecs::System {
         sf::RenderWindow& renderWindow;
     public:
-        explicit DrawingSystem(sf::RenderWindow& _renderWindow) : renderWindow(_renderWindow) {};
+        explicit DrawingSystem(sf::RenderWindow& _renderWindow) : renderWindow(_renderWindow) {}
 
         void update(float deltaTime) override {
             ecs->view<components::Transform, components::Drawable>().each(

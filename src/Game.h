@@ -21,15 +21,17 @@
 #include "Systems/Physics/MovementSystem.h"
 #include "Systems/Player/PlayerSystem.h"
 #include "Utility/AssetManager.h"
+#include "SceneLogic/SceneManager.h"
 
 namespace ms {
     class Game {
-        ecs::ECS                ecs;
-        sf::RenderWindow        mainWindow;
-        systems::Quadtree       m_quadtree;
-        utility::EventHandling  eventHandler;
-        EventDispatcher         eventDispatcher;
-        utility::AssetManager   assetManager;
+        ecs::ECS                    ecs;
+        sf::RenderWindow            mainWindow;
+        systems::Quadtree           m_quadtree;
+        utility::EventHandling      eventHandler;
+        EventDispatcher             eventDispatcher;
+        utility::AssetManager       assetManager;
+        scene_logic::SceneManager   scene_manager;
     public:
         Game() :
             mainWindow(sf::VideoMode({800, 600}), "My window", sf::Style::Default),
@@ -45,10 +47,10 @@ namespace ms {
             ecs.registerComponent<components::Player>();
             ecs.registerComponent<components::ShootingAccess>();
 
-            ecs.registerSystem<systems::SpatialHash>(m_quadtree, eventDispatcher);
-            ecs.registerSystem<systems::DrawingSystem>(mainWindow);
-            ecs.registerSystem<systems::PlayerSystem>(eventDispatcher);
-            ecs.registerSystem<systems::MovementSystem>();
+            ecs.registerSystem<systems::SpatialHash>([](){ return true; }, m_quadtree, eventDispatcher);
+            ecs.registerSystem<systems::DrawingSystem>([](){ return true; }, mainWindow);
+            ecs.registerSystem<systems::PlayerSystem>([](){ return true; }, eventDispatcher);
+            ecs.registerSystem<systems::MovementSystem>([](){ return true; });
 
             utility::EventSignalFactory::createEventSignal<Event::PlayerShot>(eventHandler, [this](Event::PlayerShot const& event) {
                 // should i move it to separate event?

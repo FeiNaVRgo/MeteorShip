@@ -10,7 +10,6 @@
 #include <vector>
 #include <SFML/Graphics/Shader.hpp>
 #include <SFML/Graphics/Texture.hpp>
-#include <SFML/Graphics/Sprite.hpp>
 #include <boost/json.hpp>
 
 #include "AnimatedSprite.h"
