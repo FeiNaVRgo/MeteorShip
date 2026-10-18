@@ -4,7 +4,6 @@
 
 #ifndef METEORSHIP_PLAYERSYSTEM_H
 #define METEORSHIP_PLAYERSYSTEM_H
-#include <cmath>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Window/Event.hpp>
 
@@ -12,6 +11,7 @@
 #include "Components/Player.h"
 #include "Components/Transform.h"
 #include "ECS/ECS.h"
+#include "Utility/UtiFuncs.h"
 
 namespace ms::systems {
     class PlayerSystem : public ecs::System {
@@ -36,11 +36,7 @@ namespace ms::systems {
                     }
 
                     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) {
-                        auto const offset = sf::Vector2f
-                        (
-                            std::sin(transform.getRotation().asRadians()),
-                            -std::cos(transform.getRotation().asRadians())
-                        ).normalized();
+                        auto const offset = utility::angleToVector(transform.getRotation()).normalized();
                         transform.move(offset);
                     }
                     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {

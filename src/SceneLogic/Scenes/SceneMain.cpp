@@ -10,6 +10,7 @@
 #include "Systems/Physics/MovementSystem.h"
 #include "Systems/Player/PlayerSystem.h"
 #include "Systems/SpatialHashing/SpatialHash.h"
+#include "Utility/UtiFuncs.h"
 
 namespace ms::scene_logic::scenes {
     SceneMain::SceneMain(Game& game, std::string name) : SceneBase(game, std::move(name)) {
@@ -59,11 +60,7 @@ namespace ms::scene_logic::scenes {
         rect.position = transform.getPosition();
         rigidbody.bounds = rect;
 
-        rigidbody.velocity = sf::Vector2f
-                    (
-                        std::sin(transform.getRotation().asRadians()),
-                        -std::cos(transform.getRotation().asRadians())
-                    ).normalized();
+        rigidbody.velocity = utility::angleToVector(transform.getRotation()).normalized();
 
         world->getECS().addComponent<components::Rigidbody>(bullet, rigidbody);
 
