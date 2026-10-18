@@ -20,71 +20,45 @@
 #include "SceneLogic/SceneManager.h"
 #include "SceneLogic/Scenes/SceneMain.h"
 
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_IMPLEMENTATION
+#define NK_SFML_GL3_IMPLEMENTATION
+
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
+
+#define MAX_VERTEX_BUFFER 512 * 1024
+#define MAX_ELEMENT_BUFFER 128 * 1024
+
+struct nk_context;
+
 namespace ms {
     class Game {
         WorldBox                    worldBox;
+        sf::ContextSettings         settings;
         sf::RenderWindow            mainWindow;
         utility::EventHandling      eventHandler;
         utility::AssetManager       assetManager;
         scene_logic::SceneManager   sceneManager;
     public:
-        Game() : worldBox(),
-                 mainWindow(sf::VideoMode({800, 600}), "My window", sf::Style::Default),
-                 eventHandler(*this),
-                 sceneManager(worldBox.getWorlds()) {
-            mainWindow.setFramerateLimit(60);
+        Game();
 
-            assetManager.loadAssets();
-
-            //scenes need to be added before registration of components
-            sceneManager.addScene(std::make_unique<scene_logic::scenes::SceneMain>(*this, "main"));
-
-            worldBox.registerComponent<components::Rigidbody>();
-            worldBox.registerComponent<components::Transform>();
-            worldBox.registerComponent<components::Drawable>();
-            worldBox.registerComponent<components::Player>();
-            worldBox.registerComponent<components::ShootingAccess>();
-
-            sceneManager.changeScene("main");
-        }
-
-
-        auto getMainWindow() -> sf::RenderWindow& {
-            return mainWindow;
-        }
+        auto getMainWindow() -> sf::RenderWindow& ;
 
         utility::AssetManager& getAssetManager() { return assetManager; }
         utility::EventHandling& getEventHandler() { return eventHandler; }
 
-        void update(sf::Time const& elapsed) {
-            sceneManager.updateCurrentScene(elapsed.asSeconds());
-        }
+        void update(sf::Time const& elapsed);
 
-        void handleEvents() {
-            while (auto const event = mainWindow.pollEvent()) {
-                eventHandler.handleEvent(event);
-            }
+        void handleEvents(nk_context *ctx);
 
-            while (auto const event = sceneManager.getCurrentScene()->getWorld()->getEventDispatcher().poll()) {
-                eventHandler.handleEvent(event);
-            }
-        }
-
-        void run() {
-            sf::Clock clock;
-
-            while (mainWindow.isOpen()) {
-                sf::Time elapsed = clock.restart();
-
-                handleEvents();
-
-                mainWindow.clear(sf::Color::Black);
-
-                update(elapsed);
-
-                mainWindow.display();
-            }
-        }
+        void run();
     };
 } // ms
 

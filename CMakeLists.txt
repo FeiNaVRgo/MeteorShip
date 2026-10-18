@@ -11,6 +11,9 @@ add_executable(${PROJECT_NAME} "${CMAKE_CURRENT_LIST_DIR}/main.cpp" ${PROJECT_IN
 target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
+find_package(glad CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE glad::glad)
+
 find_package(SFML COMPONENTS Network Graphics Window Audio System CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE SFML::Network SFML::Graphics SFML::Window SFML::Audio SFML::System)
 
@@ -19,6 +22,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE imgui::imgui)
 
 find_package(Boost CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${Boost_LIBRARIES})
+
+find_package(unofficial-nuklear CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE nuklear)
 
 add_custom_target(copy_assets
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_LIST_DIR}/assets ${CMAKE_CURRENT_BINARY_DIR}/assets

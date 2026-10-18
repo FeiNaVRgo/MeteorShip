@@ -148,7 +148,7 @@ namespace ms::systems {
             draw(root.get(), renderTarget);
         }
     private:
-        static void drawRect(sf::FloatRect const& rect, sf::RenderTarget& renderTarget) {
+        static void     drawRect(sf::FloatRect const& rect, sf::RenderTarget& renderTarget) {
             constexpr float thickness = 2.f;
             sf::RectangleShape rectangle;
             rectangle.setSize(sf::Vector2f(rect.size - sf::Vector2{thickness * 2.f, thickness * 2.f}));
