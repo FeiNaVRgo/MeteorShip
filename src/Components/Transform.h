@@ -4,7 +4,8 @@
 
 #ifndef METEORSHIP_TRANSFORM_H
 #define METEORSHIP_TRANSFORM_H
-#include <SFML/System/Vector2.hpp>
+
+#include <SFML/Graphics/Transformable.hpp>
 
 namespace ms::components {
     struct Transform : public sf::Transformable {};

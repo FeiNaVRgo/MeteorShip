@@ -376,11 +376,8 @@ namespace ms {
         public:
             virtual ~System() = default;
             void setEcs(ECS* _ecs) { ecs = _ecs; };
-            template<typename F>
-            void setCondition(F&& condition) { conditionToUpdate = std::forward<F>(condition); }
 
-            virtual void update(float deltaTime){};
-            void conditionalUpdate(float const deltaTime) { if (conditionToUpdate()) update(deltaTime); }
+            virtual void update(float deltaTime){}
         };
 
         class ECS {
@@ -437,11 +434,10 @@ namespace ms {
                 return View<Components...>(&componentManager);
             }
 
-            template<typename S, typename F, typename ...Args>
-            S& registerSystem(F&& f, Args&& ...args) {
+            template<typename S, typename ...Args>
+            S& registerSystem(Args&& ...args) {
                 auto system = std::make_unique<S>(std::forward<Args>(args)...);
                 system->setEcs(this);
-                system->setCondition(f);
                 S& ref = *system;
                 systems.emplace_back(std::move(system));
                 return ref;
@@ -449,7 +445,7 @@ namespace ms {
 
             void update(float const deltaTime) const {
                 for (auto& system : systems) {
-                    system->conditionalUpdate(deltaTime);
+                    system->update(deltaTime);
                 }
             }
 

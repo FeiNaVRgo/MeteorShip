@@ -47,11 +47,11 @@ namespace ms::utility {
     private:
         void loadShader(std::filesystem::path const& path) {
             if (path.extension() == ".vert") {
-                shaderMap[path.stem()].push_back(sf::Shader{path, sf::Shader::Type::Vertex});
+                shaderMap[path.stem().string()].emplace_back(path, sf::Shader::Type::Vertex);
             } else if (path.extension() == ".frag") {
-                shaderMap[path.stem()].push_back(sf::Shader{path, sf::Shader::Type::Fragment});
+                shaderMap[path.stem().string()].emplace_back(path, sf::Shader::Type::Fragment);
             } else if (path.extension() == ".geom") {
-                shaderMap[path.stem()].push_back(sf::Shader{path, sf::Shader::Type::Geometry});
+                shaderMap[path.stem().string()].emplace_back(path, sf::Shader::Type::Geometry);
             }
         }
 

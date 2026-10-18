@@ -14,156 +14,51 @@
 #include "ECS/ECS.h"
 #include "Events/EventDispatcher.h"
 #include "Systems/SpatialHashing/Quadtree.h"
-#include "Systems/SpatialHashing/SpatialHash.h"
 #include "Events/EventHandling.h"
-#include "Events/EventSignalFactory.h"
 #include "Systems/Drawing/DrawingSystem.h"
-#include "Systems/Physics/MovementSystem.h"
-#include "Systems/Player/PlayerSystem.h"
 #include "Utility/AssetManager.h"
 #include "SceneLogic/SceneManager.h"
+#include "SceneLogic/Scenes/SceneMain.h"
+
+#define NK_INCLUDE_FIXED_TYPES
+#define NK_INCLUDE_STANDARD_IO
+#define NK_INCLUDE_STANDARD_VARARGS
+#define NK_INCLUDE_DEFAULT_ALLOCATOR
+#define NK_INCLUDE_VERTEX_BUFFER_OUTPUT
+#define NK_INCLUDE_FONT_BAKING
+#define NK_INCLUDE_DEFAULT_FONT
+#define NK_IMPLEMENTATION
+#define NK_SFML_GL3_IMPLEMENTATION
+
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
+
+#define MAX_VERTEX_BUFFER 512 * 1024
+#define MAX_ELEMENT_BUFFER 128 * 1024
+
+struct nk_context;
 
 namespace ms {
     class Game {
-        ecs::ECS                    ecs;
+        WorldBox                    worldBox;
+        sf::ContextSettings         settings;
         sf::RenderWindow            mainWindow;
-        systems::Quadtree           m_quadtree;
         utility::EventHandling      eventHandler;
-        EventDispatcher             eventDispatcher;
         utility::AssetManager       assetManager;
-        scene_logic::SceneManager   scene_manager;
+        scene_logic::SceneManager   sceneManager;
     public:
-        Game() :
-            mainWindow(sf::VideoMode({800, 600}), "My window", sf::Style::Default),
-            m_quadtree({{0.f, 0.f}, {static_cast<float>(mainWindow.getSize().x), static_cast<float>(mainWindow.getSize().y)}}),
-            eventHandler(*this) {
-            mainWindow.setFramerateLimit(60);
+        Game();
 
-            assetManager.loadAssets();
+        auto getMainWindow() -> sf::RenderWindow& ;
 
-            ecs.registerComponent<components::Rigidbody>();
-            ecs.registerComponent<components::Transform>();
-            ecs.registerComponent<components::Drawable>();
-            ecs.registerComponent<components::Player>();
-            ecs.registerComponent<components::ShootingAccess>();
+        utility::AssetManager& getAssetManager() { return assetManager; }
+        utility::EventHandling& getEventHandler() { return eventHandler; }
 
-            ecs.registerSystem<systems::SpatialHash>([](){ return true; }, m_quadtree, eventDispatcher);
-            ecs.registerSystem<systems::DrawingSystem>([](){ return true; }, mainWindow);
-            ecs.registerSystem<systems::PlayerSystem>([](){ return true; }, eventDispatcher);
-            ecs.registerSystem<systems::MovementSystem>([](){ return true; });
+        void update(sf::Time const& elapsed);
 
-            utility::EventSignalFactory::createEventSignal<Event::PlayerShot>(eventHandler, [this](Event::PlayerShot const& event) {
-                // should i move it to separate event?
-                // something like player bullet created or something idk idk
-                createPlayerBullet(event.player);
-            });
-            utility::EventSignalFactory::createEventSignal<Event::RemoveEntity>(eventHandler, [this](Event::RemoveEntity const& event) {
-               ecs.destroyEntity(event.entity);
-            });
+        void handleEvents(nk_context *ctx);
 
-            createPlayer();
-        }
-
-        void createPlayerBullet(ecs::Entity player) {
-            auto const bullet = ecs.createEntity();
-
-            auto const& p_transform = ecs.getComponent<components::Transform>(player);
-
-            components::Transform transform{};
-            transform.setRotation(p_transform.getRotation());
-            transform.setPosition(p_transform.getPosition());
-            ecs.addComponent<components::Transform>(bullet, transform);
-
-            components::Drawable drawable{};
-            drawable.sprite = assetManager.spriteMap.at("Bullets-spritesheet");
-            ecs.addComponent<components::Drawable>(bullet, drawable);
-
-            components::Rigidbody rigidbody{};
-            auto rect = drawable.sprite.value().sprite.getLocalBounds();
-            rect.position = transform.getPosition();
-            rigidbody.bounds = rect;
-
-            rigidbody.velocity = sf::Vector2f
-                        (
-                            std::sin(transform.getRotation().asRadians()),
-                            -std::cos(transform.getRotation().asRadians())
-                        ).normalized();
-
-            ecs.addComponent<components::Rigidbody>(bullet, rigidbody);
-
-            m_quadtree.insert(bullet, rigidbody.bounds);
-        }
-
-        void createPlayer() {
-            auto const player = ecs.createEntity();
-
-            ecs.addComponent<components::Player>(player);
-            ecs.addComponent<components::ShootingAccess>(player, components::ShootingAccess(1.f));
-
-            components::Transform transform{};
-            transform.setRotation(sf::degrees(0));
-            transform.setPosition(sf::Vector2f(mainWindow.getSize().x / 2.f, mainWindow.getSize().y / 2.f));
-            ecs.addComponent<components::Transform>(player, transform);
-
-            components::Drawable drawable{};
-            drawable.sprite = assetManager.spriteMap.at("JetFighter-Var3-Spritesheet");
-            ecs.addComponent<components::Drawable>(player, drawable);
-
-            components::Rigidbody rigidbody{};
-            auto rect = drawable.sprite.value().sprite.getLocalBounds();
-            rect.position = transform.getPosition();
-            rigidbody.bounds = rect;
-            ecs.addComponent<components::Rigidbody>(player, rigidbody);
-
-            m_quadtree.insert(player, rigidbody.bounds);
-        }
-
-        auto getEcs() -> ecs::ECS& {
-            return ecs;
-        }
-
-        auto getMainWindow() -> sf::RenderWindow& {
-            return mainWindow;
-        }
-
-        auto getQuadtree() -> systems::Quadtree& {
-            return m_quadtree;
-        }
-
-        void draw() {
-            m_quadtree.draw(mainWindow);
-        }
-
-        void update(sf::Time const& elapsed) {
-            ecs.update(elapsed.asSeconds());
-        }
-
-        void handleEvents() {
-            while (auto const event = mainWindow.pollEvent()) {
-                eventHandler.handleEvent(event);
-            }
-
-            while (auto const event = eventDispatcher.poll()) {
-                eventHandler.handleEvent(event);
-            }
-        }
-
-        void run() {
-            sf::Clock clock;
-
-            while (mainWindow.isOpen()) {
-                sf::Time elapsed = clock.restart();
-
-                handleEvents();
-
-                mainWindow.clear(sf::Color::Black);
-
-                draw();
-                update(elapsed);
-
-                mainWindow.display();
-            }
-        }
+        void run();
     };
 } // ms
 

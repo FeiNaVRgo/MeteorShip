@@ -4,7 +4,7 @@
   "dependencies": [
     {
       "name": "boost",
-      "version>=": "1.92.0"
+      "version>=": "1.91.0"
     },
     {
       "name": "sfml",
@@ -13,6 +13,14 @@
     {
       "name": "imgui",
       "version>=": "1.92.9"
+    },
+    {
+      "name": "nuklear",
+      "version>=": "4.13.3"
+    },
+    {
+      "name": "glad",
+      "version>=": "0.1.36"
     }
   ],
   "builtin-baseline": "f87344cac03158cbf1467264565f1fd36b382a24"

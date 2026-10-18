@@ -5,25 +5,25 @@
 #include "SceneManager.h"
 
 namespace ms::scene_logic {
-    SceneManager::SceneManager() : currentScene(nullptr) {
-    }
+    SceneManager::SceneManager(std::vector<std::shared_ptr<World>>& worlds)
+    : currentScene(nullptr),
+      worlds(worlds) {}
+
     SceneManager::~SceneManager() = default;
 
-    void SceneManager::updateCurrentScene() const {
-        if (currentScene != nullptr) currentScene->update();
+    void SceneManager::updateCurrentScene(float elapsedTime) const {
+        if (currentScene != nullptr) currentScene->update(elapsedTime);
     }
 
     void SceneManager::changeScene(std::string const& name) {
-        if (scenes.contains(name)) {
-            if (currentScene != nullptr) currentScene->destroy();
-
-            auto scene = scenes.at(name);
-            scene->update();
-            currentScene = scene;
-        }
+        if (currentScene != nullptr) currentScene->destroy();
+        scenes.at(name).get()->init();
+        currentScene = scenes.at(name).get();
     }
 
-    void SceneManager::addScene(scenes::SceneBase* scene) {
-        scenes[scene->getName()] = scene;
+
+    void SceneManager::addScene(std::unique_ptr<scenes::SceneBase> scene) {
+        worlds.push_back(scene->getWorld());
+        scenes.try_emplace(scene->getName(), std::move(scene));
     }
 }
