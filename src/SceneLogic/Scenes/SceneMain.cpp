@@ -19,6 +19,25 @@ namespace ms::scene_logic::scenes {
         world->registerSystem<systems::DrawingSystem>(game.getMainWindow());
         world->registerSystem<systems::PlayerSystem>(world->getEventDispatcher());
         world->registerSystem<systems::MovementSystem>();
+
+        ui.root = std::make_unique<ui::UINode>();
+
+        auto label = std::make_unique<ui::UINode>(ui::widgets::LabelWidget{"Root Node"});
+        //label->size = {50, 15};
+        auto btn   = std::make_unique<ui::UINode>(ui::widgets::ButtonWidget{"Click Me", []{ std::cout << "button clicked\n"; }},
+                                             sf::Vector2f{50.f, 10.f});
+        btn->size = {50, 15};
+        auto sldr  = std::make_unique<ui::UINode>(ui::widgets::SliderWidget{0.7f},
+                                             sf::Vector2f{50.f, 100.f});
+        sldr->size = {50, 15};
+        auto nested = std::make_unique<ui::UINode>(ui::widgets::LabelWidget{"Nested Label"},
+                                              sf::Vector2f{40.f, 30.f});
+        //nested->size = {50, 15};
+        btn->addChild(std::move(nested));
+
+        ui.root->addChild(std::move(label));
+        ui.root->addChild(std::move(btn));
+        ui.root->addChild(std::move(sldr));
     }
 
     void SceneMain::init() {

@@ -170,11 +170,12 @@ nk_sfml_device_destroy(void)
     glDetachShader(dev->prog, dev->vert_shdr);
     glDetachShader(dev->prog, dev->frag_shdr);
     glDeleteShader(dev->vert_shdr);
-    glDeleteShader(dev->vert_shdr);
+    glDeleteShader(dev->frag_shdr);
     glDeleteProgram(dev->prog);
     glDeleteTextures(1, &dev->font_tex);
     glDeleteBuffers(1, &dev->vbo);
     glDeleteBuffers(1, &dev->ebo);
+    glDeleteVertexArrays(1, &dev->vao);
     nk_buffer_free(&dev->cmds);
 }
 

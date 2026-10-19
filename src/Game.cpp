@@ -3,15 +3,25 @@
 //
 
 #include "Game.h"
-#include <nuklear.h>
+
+#include "nuklear_config.h"
+
+#define NK_SFML_GL3_IMPLEMENTATION
 #include "nuklear_sfml_gl3.h"
+
+#define MAX_VERTEX_BUFFER 512 * 1024
+#define MAX_ELEMENT_BUFFER 128 * 1024
+
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
+
 #include <glad/glad.h>
 
 #include "Components/Drawable.h"
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
 #include "Components/Player.h"
-#include "Components/ShootingAccess.h""
+#include "Components/ShootingAccess.h"
 #include "Events/EventDispatcher.h"
 #include "Systems/SpatialHashing/Quadtree.h"
 
@@ -25,7 +35,7 @@ namespace ms
                   sceneManager(worldBox.getWorlds()) {
         mainWindow.setFramerateLimit(60);
         mainWindow.setVerticalSyncEnabled(true);
-        mainWindow.setActive(true);
+        auto b = mainWindow.setActive(true);
 
         if(!gladLoadGL()) { /* Load OpenGL extensions */
             printf("Failed to load OpenGL extensions!\n");
@@ -85,21 +95,7 @@ namespace ms
 
             //TODO: make c++ bindings to nuklear ui
             //make ui class that can store ui context
-            {
-                nk_style *s = &ctx->style;
-                nk_style_push_color(ctx, &s->window.background, nk_rgba(0,0,0,0));
-                nk_style_push_style_item(ctx, &s->window.fixed_background, nk_style_item_color(nk_rgba(0,0,0,0)));
-                if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250), NK_WINDOW_DYNAMIC))
-                {
-                    nk_layout_row_static(ctx, 30, 80, 1);
-                    if (nk_button_label(ctx, "button")) {
-                        std::cout << "button pressed \n";
-                    }
-                }
-                nk_end(ctx);
-                nk_style_pop_color(ctx);
-                nk_style_pop_style_item(ctx);
-            }
+            sceneManager.getCurrentScene()->drawUI(ctx);
 
             auto isActiveWindow = mainWindow.setActive(true);
             mainWindow.clear(sf::Color(bg.r * 255, bg.g * 255, bg.b * 255, bg.a * 255));
