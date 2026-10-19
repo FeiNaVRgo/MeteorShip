@@ -10,6 +10,7 @@
 #include "Systems/Physics/MovementSystem.h"
 #include "Systems/Player/PlayerSystem.h"
 #include "Systems/SpatialHashing/SpatialHash.h"
+#include "Systems/Drawing/DrawingSystem.h"
 #include "Utility/UtiFuncs.h"
 
 namespace ms::scene_logic::scenes {

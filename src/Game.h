@@ -6,16 +6,7 @@
 #define METEORSHIP_GAME_H
 
 #include <SFML/Graphics.hpp>
-#include "Components/Drawable.h"
-#include "Components/Rigidbody.h"
-#include "Components/Transform.h"
-#include "Components/Player.h"
-#include "Components/ShootingAccess.h"
-#include "ECS/ECS.h"
-#include "Events/EventDispatcher.h"
-#include "Systems/SpatialHashing/Quadtree.h"
 #include "Events/EventHandling.h"
-#include "Systems/Drawing/DrawingSystem.h"
 #include "Utility/AssetManager.h"
 #include "SceneLogic/SceneManager.h"
 #include "SceneLogic/Scenes/SceneMain.h"
@@ -37,6 +28,7 @@
 #define MAX_ELEMENT_BUFFER 128 * 1024
 
 struct nk_context;
+struct nk_font_atlas;
 
 namespace ms {
     class Game {
@@ -46,17 +38,19 @@ namespace ms {
         utility::EventHandling      eventHandler;
         utility::AssetManager       assetManager;
         scene_logic::SceneManager   sceneManager;
+        nk_context*                 ctx;
+        nk_font_atlas*              atlas;
     public:
         Game();
 
-        auto getMainWindow() -> sf::RenderWindow& ;
+        sf::RenderWindow& getMainWindow();
 
         utility::AssetManager& getAssetManager() { return assetManager; }
         utility::EventHandling& getEventHandler() { return eventHandler; }
 
-        void update(sf::Time const& elapsed);
+        void update(sf::Time const& elapsed) const;
 
-        void handleEvents(nk_context *ctx);
+        void handleEvents();
 
         void run();
     };

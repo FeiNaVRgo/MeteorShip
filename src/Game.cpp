@@ -7,6 +7,15 @@
 #include "nuklear_sfml_gl3.h"
 #include <glad/glad.h>
 
+#include "Components/Drawable.h"
+#include "Components/Rigidbody.h"
+#include "Components/Transform.h"
+#include "Components/Player.h"
+#include "Components/ShootingAccess.h""
+#include "Events/EventDispatcher.h"
+#include "Systems/SpatialHashing/Quadtree.h"
+
+
 namespace ms
 {
     Game::Game(): worldBox(),
@@ -17,6 +26,16 @@ namespace ms
         mainWindow.setFramerateLimit(60);
         mainWindow.setVerticalSyncEnabled(true);
         mainWindow.setActive(true);
+
+        if(!gladLoadGL()) { /* Load OpenGL extensions */
+            printf("Failed to load OpenGL extensions!\n");
+            return;
+        }
+        glViewport(0, 0, mainWindow.getSize().x, mainWindow.getSize().y);
+        ctx = nk_sfml_init(&mainWindow);
+        nk_sfml_font_stash_begin(&atlas);
+        nk_sfml_font_stash_end();
+
 
         assetManager.loadAssets();
 
@@ -32,15 +51,15 @@ namespace ms
         sceneManager.changeScene("main");
     }
 
-    auto Game::getMainWindow() -> sf::RenderWindow & {
+    sf::RenderWindow& Game::getMainWindow() {
         return mainWindow;
     }
 
-    void Game::update(sf::Time const &elapsed) {
+    void Game::update(sf::Time const &elapsed) const {
         sceneManager.updateCurrentScene(elapsed.asSeconds());
     }
 
-    void Game::handleEvents(nk_context *ctx) {
+    void Game::handleEvents() {
         nk_input_begin(ctx);
         while (auto event = mainWindow.pollEvent()) {
             eventHandler.handleEvent(event);
@@ -56,61 +75,31 @@ namespace ms
     void Game::run() {
         sf::Clock clock;
 
-        if(!gladLoadGL()) { /* Load OpenGL extensions */
-            printf("Failed to load OpenGL extensions!\n");
-            return;
-        }
-        glViewport(0, 0, mainWindow.getSize().x, mainWindow.getSize().y);
-
-        struct nk_context* ctx;
-        ctx = nk_sfml_init(&mainWindow);
-        struct nk_font_atlas *atlas;
-        nk_sfml_font_stash_begin(&atlas);
-        nk_sfml_font_stash_end();
-
-        struct nk_colorf bg;
+        nk_colorf bg{};
         bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
 
         while (mainWindow.isOpen()) {
             sf::Time elapsed = clock.restart();
 
-            handleEvents(ctx);
+            handleEvents();
 
             //TODO: make c++ bindings to nuklear ui
             //make ui class that can store ui context
-            if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250),
-                         NK_WINDOW_BORDER|NK_WINDOW_MOVABLE|NK_WINDOW_SCALABLE|
-                         NK_WINDOW_MINIMIZABLE|NK_WINDOW_TITLE))
             {
-                enum {EASY, HARD};
-                static int op = EASY;
-                static int property = 20;
-                nk_layout_row_static(ctx, 30, 80, 1);
-                if (nk_button_label(ctx, "button"))
-                    fprintf(stdout, "button pressed\n");
-
-                nk_layout_row_dynamic(ctx, 30, 2);
-                if (nk_option_label(ctx, "easy", op == EASY)) op = EASY;
-                if (nk_option_label(ctx, "hard", op == HARD)) op = HARD;
-
-                nk_layout_row_dynamic(ctx, 25, 1);
-                nk_property_int(ctx, "Compression:", 0, &property, 100, 10, 1);
-
-                nk_layout_row_dynamic(ctx, 20, 1);
-                nk_label(ctx, "background:", NK_TEXT_LEFT);
-                nk_layout_row_dynamic(ctx, 25, 1);
-                if (nk_combo_begin_color(ctx, nk_rgb_cf(bg), nk_vec2(nk_widget_width(ctx),400))) {
-                    nk_layout_row_dynamic(ctx, 120, 1);
-                    bg = nk_color_picker(ctx, bg, NK_RGBA);
-                    nk_layout_row_dynamic(ctx, 25, 1);
-                    bg.r = nk_propertyf(ctx, "#R:", 0, bg.r, 1.0f, 0.01f,0.005f);
-                    bg.g = nk_propertyf(ctx, "#G:", 0, bg.g, 1.0f, 0.01f,0.005f);
-                    bg.b = nk_propertyf(ctx, "#B:", 0, bg.b, 1.0f, 0.01f,0.005f);
-                    bg.a = nk_propertyf(ctx, "#A:", 0, bg.a, 1.0f, 0.01f,0.005f);
-                    nk_combo_end(ctx);
+                nk_style *s = &ctx->style;
+                nk_style_push_color(ctx, &s->window.background, nk_rgba(0,0,0,0));
+                nk_style_push_style_item(ctx, &s->window.fixed_background, nk_style_item_color(nk_rgba(0,0,0,0)));
+                if (nk_begin(ctx, "Demo", nk_rect(50, 50, 230, 250), NK_WINDOW_DYNAMIC))
+                {
+                    nk_layout_row_static(ctx, 30, 80, 1);
+                    if (nk_button_label(ctx, "button")) {
+                        std::cout << "button pressed \n";
+                    }
                 }
+                nk_end(ctx);
+                nk_style_pop_color(ctx);
+                nk_style_pop_style_item(ctx);
             }
-            nk_end(ctx);
 
             auto isActiveWindow = mainWindow.setActive(true);
             mainWindow.clear(sf::Color(bg.r * 255, bg.g * 255, bg.b * 255, bg.a * 255));

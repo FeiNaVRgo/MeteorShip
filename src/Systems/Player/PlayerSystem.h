@@ -10,6 +10,7 @@
 #include "Components/Drawable.h"
 #include "Components/Player.h"
 #include "Components/Transform.h"
+#include "Components/ShootingAccess.h"
 #include "ECS/ECS.h"
 #include "Utility/UtiFuncs.h"
 
