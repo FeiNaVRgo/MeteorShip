@@ -23,6 +23,8 @@ namespace ms::scene_logic::scenes {
         void createPlayerBullet(ecs::Entity player);
 
         void createPlayer();
+
+        void createEnemy();
     };
 }
 

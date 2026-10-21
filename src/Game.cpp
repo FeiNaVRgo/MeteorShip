@@ -17,9 +17,13 @@
 
 #include <glad/glad.h>
 #include <behaviortree_cpp/bt_factory.h>
+#include <behaviortree_cpp/xml_parsing.h>
 #include <pybind11/embed.h>
 
+#include "BTNodes/ApproachObject.h"
+#include "Components/BehaviorTree.h"
 #include "Components/Drawable.h"
+#include "Components/Enemy.h"
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
 #include "Components/Player.h"
@@ -35,7 +39,21 @@ namespace ms
                   settings(24, 8, 4, 3, 3),
                   mainWindow(sf::VideoMode({800, 600}), "My window", sf::Style::Default, sf::State::Windowed, settings),
                   eventHandler(*this),
-                  sceneManager(worldBox.getWorlds()) {
+                  sceneManager(worldBox.getWorlds()),
+                  globalBlackboard(BT::Blackboard::create()) {
+
+        {
+            //here is where we register all of out nodes for behavior
+            factory.registerNodeType<bt_nodes::ApproachObject>("ApproachObject");
+            std::string xml_models = BT::writeTreeNodesModelXML(factory);
+            std::ofstream out("models.xml");
+            if (out.is_open()) {
+                out << xml_models;
+                out.close();
+            }
+        }
+        globalBlackboard->set("game_ptr", this);
+
         mainWindow.setFramerateLimit(60);
         mainWindow.setVerticalSyncEnabled(true);
         auto b = mainWindow.setActive(true);
@@ -61,10 +79,10 @@ namespace ms
         worldBox.registerComponent<components::Drawable>();
         worldBox.registerComponent<components::Player>();
         worldBox.registerComponent<components::ShootingAccess>();
+        worldBox.registerComponent<components::BehaviorTree>();
+        worldBox.registerComponent<components::Enemy>();
 
         sceneManager.changeScene("main");
-
-        BT::BehaviorTreeFactory factory;
     }
 
     sf::RenderWindow& Game::getMainWindow() {
@@ -94,9 +112,23 @@ namespace ms
         nk_colorf bg{};
         bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
 
+        /*
         py::scoped_interpreter guard{};
-        py::object scope = py::module::import("__main__").attr("__dict__");
-        py::eval_file("./scripts/example.py", scope);
+        auto cppModule = py::module_::import("CPPModule");
+
+        std::ifstream file("./scripts/example.py");
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string scriptSource = buffer.str();
+
+        py::dict globals = cppModule.attr("__dict__");
+
+        py::exec(scriptSource, globals);
+        py::object updateFunc = globals["func"];
+        updateFunc();
+        */
+
+
 
         while (mainWindow.isOpen()) {
             sf::Time elapsed = clock.restart();

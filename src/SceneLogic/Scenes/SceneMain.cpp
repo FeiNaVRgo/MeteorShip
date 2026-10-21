@@ -6,7 +6,10 @@
 #include "Game.h"
 #include <utility>
 
+#include "BTNodes/BTreeCreation.h"
+#include "Components/Enemy.h"
 #include "Events/EventSignalFactory.h"
+#include "Systems/Behavior/BehaviorSystem.h"
 #include "Systems/Physics/MovementSystem.h"
 #include "Systems/Player/PlayerSystem.h"
 #include "Systems/SpatialHashing/SpatialHash.h"
@@ -19,6 +22,7 @@ namespace ms::scene_logic::scenes {
         world->registerSystem<systems::DrawingSystem>(game.getMainWindow());
         world->registerSystem<systems::PlayerSystem>(world->getEventDispatcher());
         world->registerSystem<systems::MovementSystem>();
+        world->registerSystem<systems::BehaviorSystem>();
 
         ui.root = std::make_unique<ui::UINode>();
 
@@ -52,6 +56,7 @@ namespace ms::scene_logic::scenes {
             [this](Event::RemoveEntity const& e) { world->getECS().destroyEntity(e.entity); });
 
         createPlayer();
+        createEnemy();
     }
 
     void SceneMain::destroy() {
@@ -111,5 +116,31 @@ namespace ms::scene_logic::scenes {
         world->getECS().addComponent<components::Rigidbody>(player, rigidbody);
 
         world->getQuadtree().insert(player, rigidbody.bounds);
+    }
+
+    void SceneMain::createEnemy() {
+        auto const enemy = world->getECS().createEntity();
+
+        world->getECS().addComponent<components::Enemy>(enemy);
+        world->getECS().addComponent<components::BehaviorTree>(enemy, create_tree_for_basic_enemy(game));
+
+        components::Transform transform{};
+        transform.setRotation(sf::degrees(0));
+        transform.setPosition(sf::Vector2f(game.getMainWindow().getSize().x / 2.f, game.getMainWindow().getSize().y / 2.f));
+        world->getECS().addComponent<components::Transform>(enemy, transform);
+
+        components::Drawable drawable{};
+        drawable.sprite = game.getAssetManager().spriteMap.at("JetFighter-Var2-Spritesheet");
+        world->getECS().addComponent<components::Drawable>(enemy, drawable);
+
+        components::Rigidbody rigidbody{};
+        auto rect = drawable.sprite.value().sprite.getLocalBounds();
+        rect.position = transform.getPosition();
+        rigidbody.bounds = rect;
+        world->getECS().addComponent<components::Rigidbody>(enemy, rigidbody);
+
+        world->getQuadtree().insert(enemy, rigidbody.bounds);
+
+
     }
 }

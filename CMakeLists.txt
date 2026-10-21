@@ -37,8 +37,15 @@ target_link_libraries(${PROJECT_NAME} PRIVATE nuklear)
 find_package(behaviortree_cpp CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE BT::behaviortree_cpp)
 
-
 add_custom_target(copy_assets
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_LIST_DIR}/assets ${CMAKE_CURRENT_BINARY_DIR}/assets ${CMAKE_CURRENT_LIST_DIR}/scripts ${CMAKE_CURRENT_BINARY_DIR}/scripts
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_LIST_DIR}/assets ${CMAKE_CURRENT_BINARY_DIR}/assets
+)
+add_custom_target(copy_scripts
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_LIST_DIR}/scripts ${CMAKE_CURRENT_BINARY_DIR}/scripts
+)
+add_custom_target(copy_behavior
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_LIST_DIR}/BTreeXML ${CMAKE_CURRENT_BINARY_DIR}/BTreeXML
 )
 add_dependencies(${PROJECT_NAME} copy_assets)
+add_dependencies(${PROJECT_NAME} copy_scripts)
+add_dependencies(${PROJECT_NAME} copy_behavior)

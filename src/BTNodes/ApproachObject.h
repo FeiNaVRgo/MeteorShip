@@ -10,12 +10,11 @@
 namespace ms::bt_nodes {
     class ApproachObject : public BT::SyncActionNode {
     public:
-        ApproachObject(const std::string& name) : BT::SyncActionNode(name, {}) {}
+        ApproachObject(const std::string& name, BT::NodeConfig const& config);
 
-        BT::NodeStatus tick() override {
-            std::cout << "ApproachObject: " << this->name() << std::endl;
-            return BT::NodeStatus::SUCCESS;
-        }
+        static BT::PortsList providedPorts();
+
+        BT::NodeStatus tick() override;
     };
 }
 

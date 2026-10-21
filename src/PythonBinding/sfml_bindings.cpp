@@ -10,7 +10,7 @@
 namespace py = pybind11;
 
 void bind_sfml(py::module_& m) {
-    py::class_<sf::Vector2f>(m, "Vector2f")
+    py::class_<sf::Vector2f, py::smart_holder>(m, "Vector2f")
         .def(py::init<>())
         .def(py::init<float, float>(), py::arg("x"), py::arg("y"))
         .def_readwrite("x", &sf::Vector2f::x)
@@ -19,7 +19,7 @@ void bind_sfml(py::module_& m) {
             return "<Vector2f(" + std::to_string(v.x) + ", " + std::to_string(v.y) + ")>";
         });
 
-    py::class_<sf::FloatRect>(m, "FloatRect")
+    py::class_<sf::FloatRect, py::smart_holder>(m, "FloatRect")
         .def(py::init<>())
         .def(py::init<sf::Vector2f, sf::Vector2f>(),
              py::arg("position"), py::arg("size"))
@@ -32,7 +32,7 @@ void bind_sfml(py::module_& m) {
                    ", " + std::to_string(r.size.y) + ")>";
         });
 
-    py::class_<sf::Angle>(m, "Angle")
+    py::class_<sf::Angle, py::smart_holder>(m, "Angle")
         .def(py::init<>())
         .def("asDegrees", &sf::Angle::asDegrees)
         .def("asRadians", &sf::Angle::asRadians);

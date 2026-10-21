@@ -9,6 +9,7 @@
 namespace ms::components {
     struct BehaviorTree {
         BT::Tree BTTree; //chai tea
+        BT::Blackboard::Ptr blackboard;
     };
 }
 

@@ -2,6 +2,7 @@
 // Created by iformat on 10/20/26.
 //
 
+#include <pybind11/embed.h>
 #include <pybind11/pybind11.h>
 #include "sfml_bindings.h"
 
@@ -13,7 +14,7 @@ namespace py = pybind11;
 void bind_components(py::module_& m) {
     using namespace ms::components;
 
-    py::class_<Transform>(m, "Transform")
+    py::class_<Transform, py::smart_holder>(m, "Transform")
         .def(py::init<>())
         .def_property("position",
             [](const Transform& t) { return t.getPosition(); },
@@ -28,14 +29,14 @@ void bind_components(py::module_& m) {
             [](const Transform& t) { return t.getOrigin(); },
             [](Transform& t, const sf::Vector2f& v) { t.setOrigin(v); });
 
-    py::class_<Rigidbody>(m, "Rigidbody")
+    py::class_<Rigidbody, py::smart_holder>(m, "Rigidbody")
         .def(py::init<>())
         .def_readwrite("velocity", &Rigidbody::velocity)
         .def_readwrite("acceleration", &Rigidbody::acceleration)
         .def_readwrite("bounds", &Rigidbody::bounds);
 }
 
-PYBIND11_MODULE(CPPModule, m) {
+PYBIND11_EMBEDDED_MODULE(CPPModule, m) {
     bind_sfml(m);
     bind_components(m);
 }

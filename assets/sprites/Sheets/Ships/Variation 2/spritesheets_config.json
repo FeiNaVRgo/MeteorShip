@@ -1,0 +1,9 @@
+[
+  {
+    "name": "JetFighter-Var2-Spritesheet",
+    "width": 32,
+    "height": 32,
+    "number_of_sprites": 3,
+    "order_of_sprites": [0, 1, 0, 2]
+  }
+]
