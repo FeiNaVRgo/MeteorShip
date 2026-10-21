@@ -22,6 +22,7 @@ namespace ms::scene_logic::scenes {
 
         ui.root = std::make_unique<ui::UINode>();
 
+        /*
         auto label = std::make_unique<ui::UINode>(ui::widgets::LabelWidget{"Root Node"});
         //label->size = {50, 15};
         auto btn   = std::make_unique<ui::UINode>(ui::widgets::ButtonWidget{"Click Me", []{ std::cout << "button clicked\n"; }},
@@ -38,6 +39,7 @@ namespace ms::scene_logic::scenes {
         ui.root->addChild(std::move(label));
         ui.root->addChild(std::move(btn));
         ui.root->addChild(std::move(sldr));
+        */
     }
 
     void SceneMain::init() {

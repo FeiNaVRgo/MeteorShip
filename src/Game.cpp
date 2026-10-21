@@ -16,6 +16,8 @@
 #define WINDOW_HEIGHT 600
 
 #include <glad/glad.h>
+#include <behaviortree_cpp/bt_factory.h>
+#include <pybind11/embed.h>
 
 #include "Components/Drawable.h"
 #include "Components/Rigidbody.h"
@@ -25,6 +27,7 @@
 #include "Events/EventDispatcher.h"
 #include "Systems/SpatialHashing/Quadtree.h"
 
+namespace py = pybind11;
 
 namespace ms
 {
@@ -37,7 +40,8 @@ namespace ms
         mainWindow.setVerticalSyncEnabled(true);
         auto b = mainWindow.setActive(true);
 
-        if(!gladLoadGL()) { /* Load OpenGL extensions */
+        //necessary for nuklear ui to work
+        if(!gladLoadGL()) {
             printf("Failed to load OpenGL extensions!\n");
             return;
         }
@@ -59,6 +63,8 @@ namespace ms
         worldBox.registerComponent<components::ShootingAccess>();
 
         sceneManager.changeScene("main");
+
+        BT::BehaviorTreeFactory factory;
     }
 
     sf::RenderWindow& Game::getMainWindow() {
@@ -87,6 +93,10 @@ namespace ms
 
         nk_colorf bg{};
         bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
+
+        py::scoped_interpreter guard{};
+        py::object scope = py::module::import("__main__").attr("__dict__");
+        py::eval_file("./scripts/example.py", scope);
 
         while (mainWindow.isOpen()) {
             sf::Time elapsed = clock.restart();
