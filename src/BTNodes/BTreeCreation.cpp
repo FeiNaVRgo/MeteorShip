@@ -8,7 +8,11 @@
 #include "ApproachObject.h"
 #include "Game.h"
 
-ms::components::BehaviorTree ms::create_tree_for_basic_enemy(Game& game) {
-    auto tree = game.getBehaviorTreeFactory().createTreeFromFile("./BTreeXML/normal_enemy.xml", game.getGlobalBlackboard());
-    return components::BehaviorTree{(std::move(tree)), game.getGlobalBlackboard()};
+ms::components::BehaviorTree ms::create_tree_for_basic_enemy(Game& game, ecs::Entity entity) {
+    auto bb = BT::Blackboard::create(game.getGlobalBlackboard());
+    bb->set("enemy", entity);
+    //works so i can now pass event arguments
+
+    auto tree = game.getBehaviorTreeFactory().createTreeFromFile("./BTreeXML/normal_enemy.xml", bb);
+    return components::BehaviorTree{(std::move(tree)), std::move(bb)};
 }

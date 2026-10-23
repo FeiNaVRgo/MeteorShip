@@ -122,7 +122,7 @@ namespace ms::scene_logic::scenes {
         auto const enemy = world->getECS().createEntity();
 
         world->getECS().addComponent<components::Enemy>(enemy);
-        world->getECS().addComponent<components::BehaviorTree>(enemy, create_tree_for_basic_enemy(game));
+        world->getECS().addComponent<components::BehaviorTree>(enemy, create_tree_for_basic_enemy(game, enemy));
 
         components::Transform transform{};
         transform.setRotation(sf::degrees(0));

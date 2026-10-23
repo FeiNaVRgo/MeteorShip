@@ -34,7 +34,7 @@ namespace ms {
         sf::RenderWindow& getMainWindow();
         utility::AssetManager& getAssetManager() { return assetManager; }
         utility::EventHandling& getEventHandler() { return eventHandler; }
-        BT::Blackboard::Ptr& getGlobalBlackboard() { return globalBlackboard; }
+        BT::Blackboard::Ptr getGlobalBlackboard() { return globalBlackboard; }
         scene_logic::SceneManager& getSceneManager() { return sceneManager; }
         BT::BehaviorTreeFactory& getBehaviorTreeFactory() { return factory; }
 

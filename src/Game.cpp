@@ -43,7 +43,7 @@ namespace ms
                   globalBlackboard(BT::Blackboard::create()) {
 
         {
-            //here is where we register all of out nodes for behavior
+            //here is where we register all of our nodes for behavior
             factory.registerNodeType<bt_nodes::ApproachObject>("ApproachObject");
             std::string xml_models = BT::writeTreeNodesModelXML(factory);
             std::ofstream out("models.xml");

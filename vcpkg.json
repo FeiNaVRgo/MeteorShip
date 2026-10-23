@@ -35,5 +35,10 @@
       "version>=": "3.1.0"
     }
   ],
-  "builtin-baseline": "65514b43a035548911e1789071785a9827470cdc"
+  "builtin-baseline": "65514b43a035548911e1789071785a9827470cdc",
+  "overrides": [
+    {
+      "name": "vcpkg-make", "version": "2026-07-09#1"
+    }
+  ]
 }

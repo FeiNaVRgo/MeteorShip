@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root BTCPP_format="4">
   <BehaviorTree ID="normal_enemy">
-    <ApproachObject game="{game_ptr}"/>
+    <ApproachObject entity="{enemy}"
+                    game="{@game_ptr}"/>
   </BehaviorTree>
 
   <!-- Description of Node Models (used by Groot) -->
   <TreeNodesModel>
     <Action ID="ApproachObject">
+      <input_port name="entity"
+                  type="unsigned int"/>
       <input_port name="game"
                   type="ms::Game*"/>
     </Action>
