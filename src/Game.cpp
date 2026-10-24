@@ -21,6 +21,7 @@
 #include <pybind11/embed.h>
 
 #include "BTNodes/ApproachObject.h"
+#include "BTNodes/IsPlayerVisible.h"
 #include "Components/BehaviorTree.h"
 #include "Components/Drawable.h"
 #include "Components/Enemy.h"
@@ -45,6 +46,7 @@ namespace ms
         {
             //here is where we register all of our nodes for behavior
             factory.registerNodeType<bt_nodes::ApproachObject>("ApproachObject");
+            factory.registerNodeType<bt_nodes::IsPlayerVisible>("IsPlayerVisible");
             std::string xml_models = BT::writeTreeNodesModelXML(factory);
             std::ofstream out("models.xml");
             if (out.is_open()) {

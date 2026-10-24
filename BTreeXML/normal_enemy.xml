@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root BTCPP_format="4">
   <BehaviorTree ID="normal_enemy">
-    <ApproachObject entity="{enemy}"
-                    game="{@game_ptr}"/>
+    <Sequence>
+      <IsPlayerVisible player_visible="{player_visible}"
+                       entity="{enemy}"
+                       game="{@game_ptr}"/>
+      <ApproachObject entity="{enemy}"
+                      game="{@game_ptr}"/>
+    </Sequence>
   </BehaviorTree>
 
   <!-- Description of Node Models (used by Groot) -->
@@ -13,6 +18,14 @@
       <input_port name="game"
                   type="ms::Game*"/>
     </Action>
+    <Condition ID="IsPlayerVisible">
+      <output_port name="player_visible"
+                   type="bool"/>
+      <input_port name="entity"
+                  type="unsigned int"/>
+      <input_port name="game"
+                  type="ms::Game*"/>
+    </Condition>
   </TreeNodesModel>
 
 </root>

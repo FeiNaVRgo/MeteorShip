@@ -10,10 +10,14 @@ namespace ms::bt_nodes {
     ApproachObject::ApproachObject(std::string const& name, BT::NodeConfig const& config) : BT::SyncActionNode(name, config) {}
 
     BT::PortsList ApproachObject::providedPorts() {
-        return { BT::InputPort<Game*>("game"), BT::InputPort<ecs::Entity>("entity") };
+        return {
+            BT::InputPort<Game*>("game"),
+               BT::InputPort<ecs::Entity>("entity")
+        };
     }
 
     BT::NodeStatus ApproachObject::tick() {
+        std::cout << "approach object" << std::endl;
         auto game = getInput<Game*>("game");
         auto entity = getInput<ecs::Entity>("entity");
         if (!entity) {
