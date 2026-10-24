@@ -30,7 +30,7 @@ namespace ms::scene_logic::scenes {
         //virtual ~SceneBase() = default;
 
         std::string const& getName() { return name; }
-        std::shared_ptr<World> const& getWorld() { return world; }
+        std::shared_ptr<World> getWorld() { return world; }
         void drawUI(nk_context* ctx);
 
         virtual void init() = 0;

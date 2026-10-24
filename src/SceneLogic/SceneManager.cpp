@@ -17,8 +17,8 @@ namespace ms::scene_logic {
 
     void SceneManager::changeScene(std::string const& name) {
         if (currentScene != nullptr) currentScene->destroy();
-        scenes.at(name).get()->init();
         currentScene = scenes.at(name).get();
+        currentScene->init();
     }
 
 

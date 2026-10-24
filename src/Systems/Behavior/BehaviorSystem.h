@@ -13,7 +13,7 @@ namespace ms::systems {
         void update(float deltaTime) override {
             ecs->view<components::BehaviorTree>().each(
                 [](ecs::Entity const& entity, components::BehaviorTree& behaviorTree) {
-                    behaviorTree.BTTree.tickWhileRunning();
+                    behaviorTree.BTTree.tickOnce();
             });
         }
     };

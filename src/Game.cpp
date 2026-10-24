@@ -20,8 +20,9 @@
 #include <behaviortree_cpp/xml_parsing.h>
 #include <pybind11/embed.h>
 
-#include "BTNodes/ApproachObject.h"
 #include "BTNodes/IsPlayerVisible.h"
+#include "BTNodes/MoveTowards.h"
+#include "BTNodes/RandomMovement.h"
 #include "Components/BehaviorTree.h"
 #include "Components/Drawable.h"
 #include "Components/Enemy.h"
@@ -45,8 +46,9 @@ namespace ms
 
         {
             //here is where we register all of our nodes for behavior
-            factory.registerNodeType<bt_nodes::ApproachObject>("ApproachObject");
             factory.registerNodeType<bt_nodes::IsPlayerVisible>("IsPlayerVisible");
+            factory.registerNodeType<bt_nodes::MoveTowards>("MoveTowards");
+            factory.registerNodeType<bt_nodes::RandomMovement>("RandomMovement");
             std::string xml_models = BT::writeTreeNodesModelXML(factory);
             std::ofstream out("models.xml");
             if (out.is_open()) {
