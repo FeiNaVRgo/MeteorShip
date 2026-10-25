@@ -21,8 +21,10 @@
 #include <pybind11/embed.h>
 
 #include "BTNodes/IsPlayerVisible.h"
+#include "BTNodes/MoveForward.h"
 #include "BTNodes/MoveTowards.h"
 #include "BTNodes/RandomMovement.h"
+#include "BTNodes/RotateTowards.h"
 #include "Components/BehaviorTree.h"
 #include "Components/Drawable.h"
 #include "Components/Enemy.h"
@@ -47,6 +49,8 @@ namespace ms
         {
             //here is where we register all of our nodes for behavior
             factory.registerNodeType<bt_nodes::IsPlayerVisible>("IsPlayerVisible");
+            factory.registerNodeType<bt_nodes::RotateTowards>("RotateTowards");
+            factory.registerNodeType<bt_nodes::MoveForward>("MoveForward");
             factory.registerNodeType<bt_nodes::MoveTowards>("MoveTowards");
             factory.registerNodeType<bt_nodes::RandomMovement>("RandomMovement");
             std::string xml_models = BT::writeTreeNodesModelXML(factory);
@@ -141,7 +145,7 @@ namespace ms
 
             //TODO: make c++ bindings to nuklear ui
             //make ui class that can store ui context
-            sceneManager.getCurrentScene()->drawUI(ctx);
+            sceneManager.getCurrentScene()->drawUI(ctx); // render of ui, puts stuff into buffer
 
             auto isActiveWindow = mainWindow.setActive(true);
             mainWindow.clear(sf::Color(bg.r * 255, bg.g * 255, bg.b * 255, bg.a * 255));
@@ -149,7 +153,7 @@ namespace ms
             update(elapsed);
 
             mainWindow.popGLStates();
-            nk_sfml_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);
+            nk_sfml_render(NK_ANTI_ALIASING_ON, MAX_VERTEX_BUFFER, MAX_ELEMENT_BUFFER);//actual render of ui
             mainWindow.pushGLStates();
 
 

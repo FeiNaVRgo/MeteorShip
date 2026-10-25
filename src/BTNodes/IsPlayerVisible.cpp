@@ -7,6 +7,7 @@
 #include <cmath>
 
 #include "BTContext.h"
+#include "Components/Player.h"
 #include "Components/Transform.h"
 #include "ECS/World.h"
 
@@ -41,22 +42,21 @@ namespace ms::bt_nodes {
             return BT::NodeStatus::FAILURE;
         }
 
+        const auto playerEntity = btContext.value().playerEntity;
+        if (!playerEntity ||
+            *playerEntity == enemy ||
+            !ecs.isEntityAlive(*playerEntity) ||
+            !ecs.hasComponent<components::Player>(*playerEntity) ||
+            !ecs.hasComponent<components::Transform>(*playerEntity)) {
+            setOutput("player_visible", false);
+            return BT::NodeStatus::FAILURE;
+        }
+
         const auto enemyPosition = ecs.getComponent<components::Transform>(enemy).getPosition();
+        const auto playerPosition = ecs.getComponent<components::Transform>(*playerEntity).getPosition();
         const float sightRangeSquared = sightRange.value() * sightRange.value();
-        bool visible = false;
-
-        ecs.view<components::Player, components::Transform>().each(
-            [&visible, enemy, enemyPosition, sightRangeSquared](
-                ecs::Entity const& player,
-                components::Player const&,
-                components::Transform const& transform) {
-                if (visible || player == enemy) {
-                    return;
-                }
-
-                const auto offset = transform.getPosition() - enemyPosition;
-                visible = offset.x * offset.x + offset.y * offset.y <= sightRangeSquared;
-            });
+        const auto offset = playerPosition - enemyPosition;
+        const bool visible = offset.x * offset.x + offset.y * offset.y <= sightRangeSquared;
 
         setOutput("player_visible", visible);
         return visible ? BT::NodeStatus::SUCCESS : BT::NodeStatus::FAILURE;

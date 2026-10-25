@@ -12,8 +12,10 @@
                           game="{@game_ptr}"/>
         </ForceFailure>
       </Fallback>
-      <MoveTowards speed="0.5"
+      <MoveForward speed="0.5"
                    bt_context="{bt_context}"/>
+      <RotateTowards speed="1"
+                     bt_context="{bt_context}"/>
     </Sequence>
   </BehaviorTree>
 
@@ -29,7 +31,7 @@
       <input_port name="game"
                   type="ms::Game*"/>
     </Condition>
-    <Action ID="MoveTowards">
+    <Action ID="MoveForward">
       <input_port name="speed"
                   type="float"/>
       <input_port name="bt_context"
@@ -40,6 +42,12 @@
                   type="ms::bt_nodes::BTContext"/>
       <input_port name="game"
                   type="ms::Game*"/>
+    </Action>
+    <Action ID="RotateTowards">
+      <input_port name="speed"
+                  type="float"/>
+      <input_port name="bt_context"
+                  type="ms::bt_nodes::BTContext"/>
     </Action>
   </TreeNodesModel>
 

@@ -39,25 +39,18 @@ namespace ms::bt_nodes {
             return BT::NodeStatus::FAILURE;
         }
 
-        bool playerFound = false;
-        sf::Vector2f playerPosition{};
-        ecs.view<components::Player, components::Transform>().each(
-            [&playerFound, &playerPosition, entity](
-                ecs::Entity const& playerEntity,
-                components::Player const&,
-                components::Transform const& transform) {
-                if (playerEntity != entity && !playerFound) {
-                    playerPosition = transform.getPosition();
-                    playerFound = true;
-                }
-            });
-
         auto& rigidbody = ecs.getComponent<components::Rigidbody>(entity);
-        if (!playerFound) {
+        const auto playerEntity = btContext.value().playerEntity;
+        if (!playerEntity ||
+            *playerEntity == entity ||
+            !ecs.isEntityAlive(*playerEntity) ||
+            !ecs.hasComponent<components::Player>(*playerEntity) ||
+            !ecs.hasComponent<components::Transform>(*playerEntity)) {
             rigidbody.velocity = {};
             return BT::NodeStatus::FAILURE;
         }
 
+        const auto playerPosition = ecs.getComponent<components::Transform>(*playerEntity).getPosition();
         const auto direction = playerPosition - ecs.getComponent<components::Transform>(entity).getPosition();
         const float distance = direction.length();
         if (distance <= 0.001f) {
