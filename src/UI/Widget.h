@@ -5,6 +5,7 @@
 #ifndef METEORSHIP_WIDGET_H
 #define METEORSHIP_WIDGET_H
 #include <functional>
+#include <optional>
 #include <string>
 #include <variant>
 #include "nuklear_config.h"
@@ -19,7 +20,7 @@ namespace ms::ui {
         struct ButtonWidget {
             std::string text;
             std::function<void()> onClick;
-            //nk_style_button style; // idk how to use it for now, its a very early setup for 9 slice functionality
+            std::optional<nk_style_button> style;
         };
 
         struct SliderWidget {
