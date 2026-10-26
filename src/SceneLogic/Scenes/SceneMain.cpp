@@ -68,6 +68,8 @@ namespace ms::scene_logic::scenes {
         world->getQuadtree().draw(game.getMainWindow());
         world->getECS().update(elapsedTime);
     }
+    //TODO: tag system for bullets so they know what they can hit and what they cant
+    //lowk every entity should know what they can collide with or damage
     void SceneMain::createPlayerBullet(ecs::Entity player) {
         auto const bullet = world->getECS().createEntity();
 

@@ -33,6 +33,7 @@
 #include "Components/Player.h"
 #include "Components/ShootingAccess.h"
 #include "Events/EventDispatcher.h"
+#include "SceneLogic/Scenes/SceneMainMenu.h"
 #include "Systems/SpatialHashing/Quadtree.h"
 
 namespace py = pybind11;
@@ -76,11 +77,12 @@ namespace ms
         nk_sfml_font_stash_begin(&atlas);
         nk_sfml_font_stash_end();
 
-
         assetManager.loadAssets();
 
         //scenes need to be added before registration of components
-        sceneManager.addScene(std::make_unique<scene_logic::scenes::SceneMain>(*this, "main"));
+        //sceneManager.addScene(std::make_unique<scene_logic::scenes::SceneMain>(*this, "main"));
+        sceneManager.addScene<scene_logic::scenes::SceneMain>(*this, "main");
+        sceneManager.addScene<scene_logic::scenes::SceneMainMenu>(*this, "main_menu");
 
         worldBox.registerComponent<components::Rigidbody>();
         worldBox.registerComponent<components::Transform>();
@@ -90,7 +92,7 @@ namespace ms
         worldBox.registerComponent<components::BehaviorTree>();
         worldBox.registerComponent<components::Enemy>();
 
-        sceneManager.changeScene("main");
+        sceneManager.changeScene("main_menu");
     }
 
     sf::RenderWindow& Game::getMainWindow() {

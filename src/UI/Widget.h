@@ -19,6 +19,7 @@ namespace ms::ui {
         struct ButtonWidget {
             std::string text;
             std::function<void()> onClick;
+            //nk_style_button style; // idk how to use it for now, its a very early setup for 9 slice functionality
         };
 
         struct SliderWidget {

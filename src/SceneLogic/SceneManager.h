@@ -22,6 +22,14 @@ namespace ms::scene_logic {
         void updateCurrentScene(float elapsedTime) const;
         void changeScene(std::string const& name);
         void addScene(std::unique_ptr<scenes::SceneBase> scene);
+
+        template<typename T, typename... Args>
+        void addScene(Args&&... args) {
+            auto scene = std::make_unique<T>(std::forward<Args>(args)...);
+            worlds.push_back(scene->getWorld());
+            scenes.try_emplace(scene->getName(), std::move(scene));
+        }
+
         [[nodiscard]] scenes::SceneBase* getCurrentScene() const {return currentScene;}
     };
 }

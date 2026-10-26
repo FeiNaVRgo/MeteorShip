@@ -26,4 +26,5 @@ namespace ms::scene_logic {
         worlds.push_back(scene->getWorld());
         scenes.try_emplace(scene->getName(), std::move(scene));
     }
+
 }
