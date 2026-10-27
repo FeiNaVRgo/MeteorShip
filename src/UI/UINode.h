@@ -60,6 +60,16 @@ namespace ms::ui {
             return *addChild(std::move(child));
         }
 
+        template<typename T>
+        T* getWidget() {
+            return widget ? std::get_if<T>(&*widget) : nullptr;
+        }
+
+        template<typename T>
+        const T* getWidget() const {
+            return widget ? std::get_if<T>(&*widget) : nullptr;
+        }
+
         UINode& alignToParent(Alignment alignment, sf::Vector2f offset = {});
         UINode& alignTo(const UINode& target, Alignment nodeAlignment, Alignment targetAlignment,
                         sf::Vector2f offset = {});

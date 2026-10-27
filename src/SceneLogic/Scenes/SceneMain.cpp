@@ -24,7 +24,28 @@ namespace ms::scene_logic::scenes {
         world->registerSystem<systems::MovementSystem>();
         world->registerSystem<systems::BehaviorSystem>();
 
+        const auto& spellTexture = game.getAssetManager().textureMap.at("Bullets-spritesheet");
+        sf::Sprite fireIcon(spellTexture);
+        fireIcon.setTextureRect(sf::IntRect({0, 0}, {8, 8}));
+        sf::Sprite frostIcon(spellTexture);
+        frostIcon.setTextureRect(sf::IntRect({8, 0}, {8, 8}));
+        inventory.storeSpell(inventory::Spell("Fire", std::move(fireIcon)));
+        inventory.storeSpell(inventory::Spell("Frost", std::move(frostIcon)));
+
+        const auto& turretTexture = game.getAssetManager().textureMap.at("JetFighter-Var3-Spritesheet");
+        sf::Sprite turretIcon(turretTexture);
+        turretIcon.setTextureRect(sf::IntRect({0, 0}, {32, 32}));
+        sf::Sprite turretIcon2(turretTexture);
+        turretIcon2.setTextureRect(sf::IntRect({0, 0}, {32, 32}));
+        inventory::Turret pulseTurret(
+            "Pulse Turret", std::move(turretIcon), 5);
+        inventory::Turret pulseTurret2(
+            "Pulse Turret", std::move(turretIcon2), 2);
+        inventory.storeTurret(std::move(pulseTurret));
+        inventory.storeTurret(std::move(pulseTurret2));
+
         ui.root = std::make_unique<ui::UINode>();
+        inventory.buildUI(*ui.root);
 
         /*
         auto label = std::make_unique<ui::UINode>(ui::widgets::LabelWidget{"Root Node"});

@@ -6,10 +6,17 @@
 #define METEORSHIP_SCENEMAIN_H
 
 #include <boost/signals2/connection.hpp>
+
+#include "Inventory/Inventory.h"
 #include "SceneBase.h"
 
 namespace ms::scene_logic::scenes {
     class SceneMain : public SceneBase {
+        inventory::Inventory inventory{
+            inventory::DefaultSpellSlotCount,
+            inventory::DefaultTurretMountCount
+        };
+
     public:
         boost::signals2::connection playerShotConn;
         boost::signals2::connection removeEntityConn;

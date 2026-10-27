@@ -8,6 +8,7 @@
 #include <optional>
 #include <string>
 #include <variant>
+#include <SFML/Graphics/Sprite.hpp>
 #include "nuklear_config.h"
 
 namespace ms::ui {
@@ -15,12 +16,21 @@ namespace ms::ui {
         struct LabelWidget {
             std::string text;
             nk_flags align = NK_TEXT_LEFT;
+            bool visible = true;
         };
 
         struct ButtonWidget {
             std::string text;
             std::function<void()> onClick;
             std::optional<nk_style_button> style;
+        };
+
+        struct InventorySlotWidget {
+            std::string itemName;
+            std::optional<sf::Sprite> icon;
+            std::function<void()> onClick;
+            bool selected = false;
+            bool visible = true;
         };
 
         struct SliderWidget {
@@ -44,6 +54,7 @@ namespace ms::ui {
     using Widget = std::variant<
         widgets::LabelWidget,
         widgets::ButtonWidget,
+        widgets::InventorySlotWidget,
         widgets::SliderWidget,
         widgets::CheckboxWidget,
         widgets::PropertyWidget
@@ -54,6 +65,8 @@ namespace ms::ui {
         void operator()(widgets::LabelWidget& w)    const;
 
         void operator()(widgets::ButtonWidget& w)   const;
+
+        void operator()(widgets::InventorySlotWidget& w) const;
 
         void operator()(widgets::SliderWidget& w)   const;
 
