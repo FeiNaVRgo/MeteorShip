@@ -7,30 +7,38 @@
 
 namespace ms::scene_logic::scenes {
     SceneMainMenu::SceneMainMenu(Game &game, const std::string &name): SceneBase(game, name) {
-        game.getAssetManager().textureMap.emplace("red_button", sf::Texture("./assets/UI/red_button.png"));
-        struct nk_image texture_img = nk_image_id(static_cast<int>(game.getAssetManager().textureMap.at("red_button").getNativeHandle()));
-        nk_ushort border_left   = 12;
-        nk_ushort border_top    = 12;
-        nk_ushort border_right  = 12;
-        nk_ushort border_bottom = 12;
-        struct nk_nine_slice button_slice = nk_nine_slice_handle(
-                                                texture_img.handle,
-                                                border_left,
-                                                border_top,
-                                                border_right,
-                                                border_bottom);
+        auto& texture = game.getAssetManager().textureMap.try_emplace(
+            "menu_button_normal",
+            sf::Texture("./assets/UI/red_button.png")
+        ).first->second;
+        texture.setSmooth(false);
 
-        struct nk_style_button style_button;
-        style_button.normal = nk_style_item_nine_slice(button_slice);
-        style_button.hover = nk_style_item_nine_slice(button_slice);
-        style_button.active = nk_style_item_nine_slice(button_slice);
-
+        const auto buttonStyle = ui::nineSliceButtonStyle(texture);
         ui.root = std::make_unique<ui::UINode>();
-        auto btn = std::make_unique<ui::UINode>(ui::widgets::ButtonWidget{.text = "PLAY", .onClick = [this]() {
-            this->game.getSceneManager().changeScene("main");
-        }, .style = style_button}, sf::Vector2f(50.f, 50.f));
-        btn->size = sf::Vector2f(50.f, 50.f);
-        ui.root->addChild(std::move(btn));
+        auto& title = ui.root->add(ui::widgets::LabelWidget{
+            .text = "METEORSHIP",
+            .align = NK_TEXT_CENTERED
+        }, {400.f, 40.f}).alignToParent(ui::Alignment::Center, {0.f, -142.f});
+        auto& subtitle = ui.root->add(ui::widgets::LabelWidget{
+            .text = "A SPACE SHOOTER",
+            .align = NK_TEXT_CENTERED
+        }, {400.f, 28.f}).alignTo(title, ui::Alignment::TopCenter, ui::Alignment::BottomCenter, {0.f, 5.f});
+
+        auto& playButton = ui.root->add(ui::widgets::ButtonWidget{
+            .text = "PLAY",
+            .onClick = [this] { this->game.getSceneManager().changeScene("main"); },
+            .style = buttonStyle
+        }, {180.f, 52.f}).alignTo(subtitle, ui::Alignment::TopCenter, ui::Alignment::BottomCenter, {0.f, 24.f});
+        auto& settingsButton = ui.root->add(ui::widgets::ButtonWidget{
+            .text = "SETTINGS",
+            .onClick = [this] { this->game.getSceneManager().changeScene("settings"); },
+            .style = buttonStyle
+        }, {180.f, 52.f}).alignTo(playButton, ui::Alignment::TopCenter, ui::Alignment::BottomCenter, {0.f, 14.f});
+        ui.root->add(ui::widgets::ButtonWidget{
+            .text = "EXIT",
+            .onClick = [this] { this->game.getMainWindow().close(); },
+            .style = buttonStyle
+        }, {180.f, 52.f}).alignTo(settingsButton, ui::Alignment::TopCenter, ui::Alignment::BottomCenter, {0.f, 14.f});
     }
 
     void SceneMainMenu::init() {

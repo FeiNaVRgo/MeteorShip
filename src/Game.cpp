@@ -34,6 +34,7 @@
 #include "Components/ShootingAccess.h"
 #include "Events/EventDispatcher.h"
 #include "SceneLogic/Scenes/SceneMainMenu.h"
+#include "SceneLogic/Scenes/SceneSettings.h"
 #include "Systems/SpatialHashing/Quadtree.h"
 
 namespace py = pybind11;
@@ -80,9 +81,9 @@ namespace ms
         assetManager.loadAssets();
 
         //scenes need to be added before registration of components
-        //sceneManager.addScene(std::make_unique<scene_logic::scenes::SceneMain>(*this, "main"));
         sceneManager.addScene<scene_logic::scenes::SceneMain>(*this, "main");
         sceneManager.addScene<scene_logic::scenes::SceneMainMenu>(*this, "main_menu");
+        sceneManager.addScene<scene_logic::scenes::SceneSettings>(*this, "settings");
 
         worldBox.registerComponent<components::Rigidbody>();
         worldBox.registerComponent<components::Transform>();
@@ -145,9 +146,7 @@ namespace ms
 
             handleEvents();
 
-            //TODO: make c++ bindings to nuklear ui
-            //make ui class that can store ui context
-            sceneManager.getCurrentScene()->drawUI(ctx); // render of ui, puts stuff into buffer
+            sceneManager.getCurrentScene()->drawUI(ctx); // render of ui, puts stuff into nuklear buffer that will be drawn later
 
             auto isActiveWindow = mainWindow.setActive(true);
             mainWindow.clear(sf::Color(bg.r * 255, bg.g * 255, bg.b * 255, bg.a * 255));

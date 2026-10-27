@@ -3,6 +3,8 @@
 
 #include <memory>
 #include <optional>
+#include <string>
+#include <utility>
 #include <vector>
 #include <SFML/System/Vector2.hpp>
 
@@ -11,8 +13,28 @@
 struct nk_context;
 
 namespace ms::ui {
+    enum class Alignment {
+        TopLeft,
+        TopCenter,
+        TopRight,
+        CenterLeft,
+        Center,
+        CenterRight,
+        BottomLeft,
+        BottomCenter,
+        BottomRight
+    };
 
     class UINode {
+        struct AlignmentConstraint {
+            const UINode* target;
+            Alignment nodeAlignment;
+            Alignment targetAlignment;
+            sf::Vector2f offset;
+        };
+
+        std::optional<AlignmentConstraint> alignment;
+
     public:
         sf::Vector2f relPos{0.0f, 0.0f};
         sf::Vector2f size{0.0f, 0.0f};
@@ -31,8 +53,18 @@ namespace ms::ui {
         //and when i am adding another node i can add it to an existing node by name
         UINode* addChild(std::unique_ptr<UINode> child);
 
-        //TODO
-        //rn when rendering in position {0, 0} there is still some height applied, fix it
+        template<typename T>
+        UINode& add(T&& widget, const sf::Vector2f nodeSize) {
+            auto child = std::make_unique<UINode>(Widget{std::forward<T>(widget)});
+            child->size = nodeSize;
+            return *addChild(std::move(child));
+        }
+
+        UINode& alignToParent(Alignment alignment, sf::Vector2f offset = {});
+        UINode& alignTo(const UINode& target, Alignment nodeAlignment, Alignment targetAlignment,
+                        sf::Vector2f offset = {});
+
+        void render(nk_context* ctx, sf::Vector2f parentAbsPos, sf::Vector2f parentSize);
         void render(nk_context* ctx, sf::Vector2f parentAbsPos);
         void render(nk_context* ctx);
     };

@@ -16,5 +16,5 @@ namespace ms::scene_logic::scenes {
 
     }
 
-    void SceneBase::drawUI(nk_context *ctx) {ui.draw(ctx);}
+    void SceneBase::drawUI(nk_context *ctx) {ui.draw(ctx, game.getMainWindow().getSize());}
 }
