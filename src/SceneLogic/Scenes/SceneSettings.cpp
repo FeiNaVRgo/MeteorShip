@@ -9,15 +9,8 @@
 namespace ms::scene_logic::scenes {
     SceneSettings::SceneSettings(Game &game, const std::string &name)
         : SceneBase(game, name) {
-        auto &texture = game.getAssetManager().textureMap.try_emplace(
-            "menu_button_normal",
-            sf::Texture("./assets/UI/red_button.png")
-        ).first->second;
-        texture.setSmooth(false);
-
-        const auto buttonStyle = ui::nineSliceButtonStyle(texture);
+        const auto buttonStyle = ui::nineSliceButtonStyle(game.getAssetManager().textureMap.at("red_button"));
         ui.root = std::make_unique<ui::UINode>();
-
         auto& title = ui.root->add(ui::widgets::LabelWidget{
             .text = "SETTINGS",
             .align = NK_TEXT_CENTERED

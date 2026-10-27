@@ -11,7 +11,6 @@
 #include <SFML/Graphics/Shader.hpp>
 #include <SFML/Graphics/Texture.hpp>
 #include <boost/json.hpp>
-
 #include "AnimatedSprite.h"
 
 namespace ms::utility {
@@ -42,9 +41,24 @@ namespace ms::utility {
                     }
                 }
             }
+            loadUIAssets();
         }
 
     private:
+        void loadUIAssets() {
+            using it = std::filesystem::recursive_directory_iterator;
+            for (auto const& path : it(std::filesystem::path(assetPath) / "UI")) {
+                if (std::filesystem::exists(path)) {
+                    if (std::filesystem::is_regular_file(path)) {
+                        if (path.path().extension() == ".png") {
+                            std::string name = path.path().stem().string();
+                            textureMap.try_emplace(name, path.path().string());
+                        }
+                    }
+                }
+            }
+        }
+
         void loadShader(std::filesystem::path const& path) {
             if (path.extension() == ".vert") {
                 shaderMap[path.stem().string()].emplace_back(path, sf::Shader::Type::Vertex);
@@ -88,9 +102,10 @@ namespace ms::utility {
                         }
                     }
 
-                    auto const& [itt, is_inserted] = textureMap.emplace(name, sf::Texture(
-                        path.parent_path().append(png_sheet_name)
-                        ));
+                    auto const& [itt, is_inserted] = textureMap.try_emplace(
+                        std::string(name.c_str()),
+                        path.parent_path() / png_sheet_name
+                    );
 
                     if (is_inserted) {
                         spriteMap.emplace(name, AnimatedSprite(
