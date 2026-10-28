@@ -18,7 +18,6 @@ namespace ms::scene_logic::scenes {
         };
 
     public:
-        boost::signals2::connection playerShotConn;
         boost::signals2::connection removeEntityConn;
 
         explicit SceneMain(Game& game, std::string name);
@@ -26,8 +25,6 @@ namespace ms::scene_logic::scenes {
         void init() override;
         void destroy() override;
         void update(float elapsedTime) override;
-
-        void createPlayerBullet(ecs::Entity player);
 
         void createPlayer();
 

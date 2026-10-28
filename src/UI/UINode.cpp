@@ -40,12 +40,14 @@ namespace ms::ui {
         return *this;
     }
 
-    static void drawWidgetAt(nk_context* ctx, const struct nk_rect& rect, Widget& w) {
+    static void drawWidgetAt(nk_context* ctx, const struct nk_rect& rect, Widget& w,
+                             UIInputState* input) {
         nk_layout_space_push(ctx, rect);
-        std::visit(WidgetDrawer{ctx}, w);
+        std::visit(WidgetDrawer{ctx, input}, w);
     }
 
-    void UINode::render(nk_context* ctx, const sf::Vector2f parentAbsPos, const sf::Vector2f parentSize) {
+    void UINode::render(nk_context* ctx, const sf::Vector2f parentAbsPos, const sf::Vector2f parentSize,
+                        UIInputState* input) {
         float w = size.x;
         float h = size.y;
 
@@ -76,7 +78,7 @@ namespace ms::ui {
         };
 
         if (widget) {
-            drawWidgetAt(ctx, rect, *widget);
+            drawWidgetAt(ctx, rect, *widget, input);
             if (size.x <= 0.0f || size.y <= 0.0f) {
                 struct nk_rect used = nk_widget_bounds(ctx);
                 if (size.x <= 0.0f) rect.w = used.w;
@@ -87,7 +89,7 @@ namespace ms::ui {
         absSize = {rect.w, rect.h};
         
         for (auto& child : children) {
-            child->render(ctx, absPos, absSize);
+            child->render(ctx, absPos, absSize, input);
         }
     }
 

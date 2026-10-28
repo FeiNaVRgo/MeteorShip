@@ -12,7 +12,7 @@
                           game="{@game_ptr}"/>
         </ForceFailure>
       </Fallback>
-      <MoveForward speed="0.5"
+      <MoveForward speed="30"
                    bt_context="{bt_context}"/>
       <RotateTowards speed="1"
                      bt_context="{bt_context}"/>

@@ -4,6 +4,8 @@
 
 #include "Game.h"
 
+#include "Components/Projectile.h"
+#include "Components/TurretMountLayout.h"
 #include "nuklear_config.h"
 
 #define NK_SFML_GL3_IMPLEMENTATION
@@ -92,6 +94,8 @@ namespace ms
         worldBox.registerComponent<components::ShootingAccess>();
         worldBox.registerComponent<components::BehaviorTree>();
         worldBox.registerComponent<components::Enemy>();
+        worldBox.registerComponent<components::TurretMountLayout>();
+        worldBox.registerComponent<components::Projectile>();
 
         sceneManager.changeScene("main_menu");
     }

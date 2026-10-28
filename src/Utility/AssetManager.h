@@ -78,7 +78,10 @@ namespace ms::utility {
                 std::stringstream ss;
                 ss << file.rdbuf();
 
-                for (boost::json::value json = boost::json::parse(ss.str()); auto it : json.as_array()) {
+                const auto json = boost::json::parse(ss.str());
+                if (!json.is_array()) return;
+
+                for (auto it : json.as_array()) {
                     boost::json::object sprite_object = it.as_object();
 
                     boost::json::value name_as_val = sprite_object["name"];

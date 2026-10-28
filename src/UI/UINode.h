@@ -74,7 +74,8 @@ namespace ms::ui {
         UINode& alignTo(const UINode& target, Alignment nodeAlignment, Alignment targetAlignment,
                         sf::Vector2f offset = {});
 
-        void render(nk_context* ctx, sf::Vector2f parentAbsPos, sf::Vector2f parentSize);
+        void render(nk_context* ctx, sf::Vector2f parentAbsPos, sf::Vector2f parentSize,
+                    UIInputState* input = nullptr);
         void render(nk_context* ctx, sf::Vector2f parentAbsPos);
         void render(nk_context* ctx);
     };

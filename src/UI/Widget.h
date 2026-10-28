@@ -7,6 +7,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <utility>
 #include <variant>
 #include <SFML/Graphics/Sprite.hpp>
 #include "nuklear_config.h"
@@ -60,8 +61,27 @@ namespace ms::ui {
         widgets::PropertyWidget
     >;
 
+    class UIInputState {
+        std::function<void()> topmostClick;
+
+    public:
+        void registerClick(const std::function<void()>& onClick) {
+            topmostClick = onClick;
+        }
+
+        void dispatchClick() {
+            if (!topmostClick) return;
+            auto onClick = std::move(topmostClick);
+            topmostClick = {};
+            onClick();
+        }
+    };
+
     struct WidgetDrawer {
         nk_context* ctx;
+        UIInputState* input = nullptr;
+
+        void handleClick(bool clicked, const std::function<void()>& onClick) const;
         void operator()(widgets::LabelWidget& w)    const;
 
         void operator()(widgets::ButtonWidget& w)   const;

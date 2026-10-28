@@ -41,8 +41,10 @@ namespace ms::ui {
         {
             struct nk_rect content = nk_window_get_content_region(ctx);
             nk_layout_space_begin(ctx, NK_STATIC, content.h, INT_MAX);
-            if (root) root->render(ctx, {0.0f, 0.0f}, {windowBounds.w, windowBounds.h});
+            UIInputState input;
+            if (root) root->render(ctx, {0.0f, 0.0f}, {windowBounds.w, windowBounds.h}, &input);
             nk_layout_space_end(ctx);
+            input.dispatchClick();
         }
         nk_end(ctx);
         nk_style_pop_color(ctx);

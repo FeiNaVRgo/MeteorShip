@@ -6,6 +6,16 @@
 
 #include <SFML/Graphics/Texture.hpp>
 
+void ms::ui::WidgetDrawer::handleClick(
+    const bool clicked, const std::function<void()>& onClick) const {
+    if (!clicked || !onClick) return;
+    if (input) {
+        input->registerClick(onClick);
+    } else {
+        onClick();
+    }
+}
+
 void ms::ui::WidgetDrawer::operator()(widgets::LabelWidget &w) const {
     if (w.visible) nk_label(ctx, w.text.c_str(), w.align);
 }
@@ -17,9 +27,7 @@ void ms::ui::WidgetDrawer::operator()(widgets::ButtonWidget &w) const {
         nk_style_push_style_item(ctx, &ctx->style.button.active, w.style.value().active);
         ctx->style.button.border = 0;
     }
-    if (nk_button_label(ctx, w.text.c_str()) && w.onClick) {
-        w.onClick();
-    }
+    handleClick(nk_button_label(ctx, w.text.c_str()), w.onClick);
     if (w.style.has_value()) {
         nk_style_pop_style_item(ctx);
         nk_style_pop_style_item(ctx);
@@ -58,9 +66,7 @@ void ms::ui::WidgetDrawer::operator()(widgets::InventorySlotWidget &w) const {
     ctx->style.button.border = previousBorder;
     nk_style_pop_color(ctx);
 
-    if (clicked && w.onClick) {
-        w.onClick();
-    }
+    handleClick(clicked, w.onClick);
 }
 
 void ms::ui::WidgetDrawer::operator()(widgets::SliderWidget &w) const { nk_slider_float(ctx, w.min, &w.value, w.max, w.step); }

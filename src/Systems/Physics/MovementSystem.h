@@ -15,12 +15,12 @@ namespace ms::systems {
         void update(float deltaTime) override {
             ecs->view<components::Rigidbody, components::Transform>()
                 .each(
-                    [this](ecs::Entity const& entity,
+                    [deltaTime](ecs::Entity const& entity,
                                 components::Rigidbody& rigidbody,
                                 components::Transform& transform)
                     {
-                        rigidbody.velocity += rigidbody.acceleration;
-                        transform.move(rigidbody.velocity);
+                        rigidbody.velocity += rigidbody.acceleration * deltaTime;
+                        transform.move(rigidbody.velocity * deltaTime);
                         
                         rigidbody.bounds.position = transform.getPosition() - rigidbody.bounds.size / 2.f;
                     }

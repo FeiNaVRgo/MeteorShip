@@ -4,33 +4,79 @@
 
 #include "SceneMain.h"
 #include "Game.h"
+#include <fstream>
+#include <sstream>
 #include <utility>
+
+#include <boost/json.hpp>
 
 #include "BTNodes/BTreeCreation.h"
 #include "Components/Enemy.h"
+#include "Components/Projectile.h"
+#include "Components/TurretMountLayout.h"
 #include "Events/EventSignalFactory.h"
 #include "Systems/Behavior/BehaviorSystem.h"
 #include "Systems/Physics/MovementSystem.h"
 #include "Systems/Player/PlayerSystem.h"
+#include "Systems/Player/TurretSystem.h"
 #include "Systems/SpatialHashing/SpatialHash.h"
 #include "Systems/Drawing/DrawingSystem.h"
 #include "Utility/UtiFuncs.h"
 
 namespace ms::scene_logic::scenes {
+    namespace {
+        std::vector<sf::Vector2f> loadTurretMountOffsets() {
+            constexpr auto configPath = "./assets/ships/player_ship.json";
+            std::ifstream configFile(configPath);
+            if (!configFile) {
+                throw std::runtime_error("Failed to open ship layout: " + std::string(configPath));
+            }
+
+            std::stringstream contents;
+            contents << configFile.rdbuf();
+            const auto config = boost::json::parse(contents.str());
+            const auto& mounts = config.as_object().at("turret_mounts").as_array();
+            std::vector<sf::Vector2f> offsets;
+            offsets.reserve(mounts.size());
+            const auto coordinate = [](const boost::json::value& value) {
+                return static_cast<float>(
+                    value.is_double() ? value.as_double() : static_cast<double>(value.as_int64()));
+            };
+            for (const auto& mount : mounts) {
+                const auto& object = mount.as_object();
+                offsets.emplace_back(
+                    coordinate(object.at("x")),
+                    coordinate(object.at("y"))
+                );
+            }
+            if (offsets.size() < inventory::DefaultTurretMountCount) {
+                throw std::runtime_error("Ship layout must define at least one hardpoint per turret mount.");
+            }
+            return offsets;
+        }
+    }
+
     SceneMain::SceneMain(Game& game, std::string name) : SceneBase(game, std::move(name)) {
-        world->registerSystem<systems::SpatialHash>(world->getQuadtree(), world->getEventDispatcher());
-        world->registerSystem<systems::DrawingSystem>(game.getMainWindow());
-        world->registerSystem<systems::PlayerSystem>(world->getEventDispatcher());
+        world->registerSystem<systems::PlayerSystem>();
         world->registerSystem<systems::MovementSystem>();
         world->registerSystem<systems::BehaviorSystem>();
+        world->registerSystem<systems::TurretSystem>(
+            inventory, game.getMainWindow(),
+            game.getAssetManager().textureMap.at("Bullets-spritesheet"));
+        world->registerSystem<systems::SpatialHash>(world->getQuadtree(), world->getEventDispatcher());
+        world->registerSystem<systems::DrawingSystem>(game.getMainWindow());
+
+        inventory.bindECS(world->getECS());
 
         const auto& spellTexture = game.getAssetManager().textureMap.at("Bullets-spritesheet");
         sf::Sprite fireIcon(spellTexture);
         fireIcon.setTextureRect(sf::IntRect({0, 0}, {8, 8}));
         sf::Sprite frostIcon(spellTexture);
         frostIcon.setTextureRect(sf::IntRect({8, 0}, {8, 8}));
-        inventory.storeSpell(inventory::Spell("Fire", std::move(fireIcon)));
-        inventory.storeSpell(inventory::Spell("Frost", std::move(frostIcon)));
+        inventory.storeSpell(inventory::Spell(
+            "Fire", std::move(fireIcon), 1.5f, 1.f, sf::Color(255, 120, 45)));
+        inventory.storeSpell(inventory::Spell(
+            "Frost", std::move(frostIcon), 1.f, 0.8f, sf::Color(100, 190, 255)));
 
         const auto& turretTexture = game.getAssetManager().textureMap.at("JetFighter-Var3-Spritesheet");
         sf::Sprite turretIcon(turretTexture);
@@ -68,10 +114,6 @@ namespace ms::scene_logic::scenes {
     }
 
     void SceneMain::init() {
-        playerShotConn = utility::EventSignalFactory::createEventSignal<Event::PlayerShot>(
-      game.getEventHandler(),
-      [this](Event::PlayerShot const& e) { createPlayerBullet(e.player); });
-
         removeEntityConn = utility::EventSignalFactory::createEventSignal<Event::RemoveEntity>(
             game.getEventHandler(),
             [this](Event::RemoveEntity const& e) { world->getECS().destroyEntity(e.entity); });
@@ -81,7 +123,6 @@ namespace ms::scene_logic::scenes {
     }
 
     void SceneMain::destroy() {
-        playerShotConn.disconnect();
         removeEntityConn.disconnect();
     }
 
@@ -89,39 +130,12 @@ namespace ms::scene_logic::scenes {
         world->getQuadtree().draw(game.getMainWindow());
         world->getECS().update(elapsedTime);
     }
-    //TODO: tag system for bullets so they know what they can hit and what they cant
-    //lowk every entity should know what they can collide with or damage
-    void SceneMain::createPlayerBullet(ecs::Entity player) {
-        auto const bullet = world->getECS().createEntity();
-
-        auto const& p_transform = world->getECS().getComponent<components::Transform>(player);
-
-        components::Transform transform{};
-        transform.setRotation(p_transform.getRotation());
-        transform.setPosition(p_transform.getPosition());
-        world->getECS().addComponent<components::Transform>(bullet, transform);
-
-        components::Drawable drawable{};
-        drawable.sprite = game.getAssetManager().spriteMap.at("Bullets-spritesheet");
-        world->getECS().addComponent<components::Drawable>(bullet, drawable);
-
-        components::Rigidbody rigidbody{};
-        auto rect = drawable.sprite.value().sprite.getLocalBounds();
-        rect.position = transform.getPosition();
-        rigidbody.bounds = rect;
-
-        rigidbody.velocity = utility::angleToVector(transform.getRotation()).normalized();
-
-        world->getECS().addComponent<components::Rigidbody>(bullet, rigidbody);
-
-        world->getQuadtree().insert(bullet, rigidbody.bounds);
-    }
-
     void SceneMain::createPlayer() {
         auto const player = world->getECS().createEntity();
 
         world->getECS().addComponent<components::Player>(player);
-        world->getECS().addComponent<components::ShootingAccess>(player, components::ShootingAccess(1.f));
+        world->getECS().addComponent<components::TurretMountLayout>(
+            player, components::TurretMountLayout{loadTurretMountOffsets()});
 
         components::Transform transform{};
         transform.setRotation(sf::degrees(0));
@@ -131,6 +145,7 @@ namespace ms::scene_logic::scenes {
         components::Drawable drawable{};
         drawable.sprite = game.getAssetManager().spriteMap.at("JetFighter-Var3-Spritesheet");
         world->getECS().addComponent<components::Drawable>(player, drawable);
+        inventory.bindPlayerEntity(player);
 
         components::Rigidbody rigidbody{};
         auto rect = drawable.sprite.value().sprite.getLocalBounds();
