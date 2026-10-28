@@ -71,6 +71,7 @@ namespace ms::inventory {
         std::vector<std::optional<ecs::Entity>> turrets;
         std::optional<ecs::Entity> playerEntity;
         std::optional<SlotAddress> selectedSlot;
+        bool uiInteractionPending = false;
         ui::UINode* uiRoot = nullptr;
         ui::widgets::LabelWidget* statusWidget = nullptr;
         std::vector<SlotWidgetEntry> slotWidgets;
@@ -138,6 +139,11 @@ namespace ms::inventory {
         const sf::Sprite* itemIcon(const SlotAddress& address) const;
         const std::optional<SlotAddress>& selectedAddress() const { return selectedSlot; }
         SlotClickResult clickSlot(const SlotAddress& address);
+        bool consumeUiInteraction() {
+            const bool pending = uiInteractionPending;
+            uiInteractionPending = false;
+            return pending;
+        }
     };
 }
 

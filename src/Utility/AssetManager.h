@@ -90,7 +90,10 @@ namespace ms::utility {
 
                     boost::json::string name = name_as_val.as_string();
 
-                    std::string png_sheet_name = std::string(name.c_str()).append(".png");
+                    const auto sheetName = sprite_object.if_contains("texture")
+                        ? sprite_object["texture"].as_string()
+                        : name_as_val.as_string();
+                    std::string png_sheet_name = std::string(sheetName.c_str()).append(".png");
                     auto rect = sf::IntRect(
                         {0, 0},
                           {static_cast<int>(width_as_val.as_int64()), static_cast<int>(height_as_val.as_int64())}
@@ -105,19 +108,17 @@ namespace ms::utility {
                         }
                     }
 
-                    auto const& [itt, is_inserted] = textureMap.try_emplace(
-                        std::string(name.c_str()),
+                    auto& texture = textureMap.try_emplace(
+                        std::string(sheetName.c_str()),
                         path.parent_path() / png_sheet_name
-                    );
+                    ).first->second;
 
-                    if (is_inserted) {
-                        spriteMap.emplace(name, AnimatedSprite(
-                            itt->second,
-                            rect,
-                            static_cast<int>(sprite_object["number_of_sprites"].as_int64()),
-                            order_of_sprites
-                        ));
-                    }
+                    spriteMap.try_emplace(std::string(name.c_str()), AnimatedSprite(
+                        texture,
+                        rect,
+                        static_cast<int>(sprite_object["number_of_sprites"].as_int64()),
+                        order_of_sprites
+                    ));
                 }
             }
         }

@@ -22,25 +22,27 @@ namespace ms::systems {
     class TurretSystem : public ecs::System {
         inventory::Inventory& inventory;
         sf::RenderWindow& window;
-        const sf::Texture& projectileTexture; // this is temporary as every spell should just hold a sprite
 
     public:
-        TurretSystem(inventory::Inventory& inventory, sf::RenderWindow& window,
-                     const sf::Texture& projectileTexture)
-            : inventory(inventory), window(window), projectileTexture(projectileTexture) {}
+        TurretSystem(inventory::Inventory& inventory, sf::RenderWindow& window)
+            : inventory(inventory), window(window) {}
 
         void update(const float elapsedTime) override {//this needs serious reimplementation
             struct ShotRequest {
                 ecs::Entity turretEntity;
                 ecs::Entity owner;
                 sf::Vector2f origin;
-                sf::Vector2f target;
+                float aimAngleRadians;
             };
             std::vector<ShotRequest> shots;
+            const bool mouseDown = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+            if (inventory.consumeUiInteraction()) suppressFiringUntilRelease = true;
+            if (!mouseDown) suppressFiringUntilRelease = false;
+            const bool firing = mouseDown && !suppressFiringUntilRelease;
 
             ecs->view<components::Player, components::Transform, components::Drawable,
                       components::TurretMountLayout>()
-                .each([this, elapsedTime, &shots](
+                .each([this, elapsedTime, firing, &shots](
                     const ecs::Entity playerEntity,
                     components::Player&,
                     const components::Transform& playerTransform,
@@ -49,7 +51,6 @@ namespace ms::systems {
                     if (!playerDrawable.sprite) return;
 
                     const auto spriteOrigin = playerDrawable.sprite->sprite.getOrigin();
-                    const bool firing = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
                     const auto mouseTarget = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
                     const auto mountCount = std::min(
@@ -96,10 +97,11 @@ namespace ms::systems {
                         if (!target) continue;
                         const auto displacement = *target - mountPosition;
                         if (displacement.x == 0.f && displacement.y == 0.f) continue;
+                        const float aimAngleRadians = std::atan2(displacement.y, displacement.x);
                         turretTransform.setRotation(
-                            sf::radians(std::atan2(displacement.x, -displacement.y)));
+                            sf::radians(aimAngleRadians + sf::degrees(90.f).asRadians()));
                         if (firing && turret.readyToShoot()) {
-                            shots.push_back({*turretEntity, playerEntity, mountPosition, *target});
+                            shots.push_back({*turretEntity, playerEntity, mountPosition, aimAngleRadians});
                         }
                     }
                 });
@@ -110,12 +112,14 @@ namespace ms::systems {
                     continue;
                 }
                 auto& turret = ecs->getComponent<inventory::Turret>(shot.turretEntity);
-                if (turret.readyToShoot() &&
-                    turret.shoot(*ecs, shot.owner, shot.origin, shot.target, projectileTexture)) {
-                    turret.beginCooldown();
+                if (turret.readyToShoot()) {
+                    turret.shoot(*ecs, shot.owner, shot.origin, shot.aimAngleRadians);
                 }
             }
         }
+
+    private:
+        bool suppressFiringUntilRelease = false;
     };
 }
 

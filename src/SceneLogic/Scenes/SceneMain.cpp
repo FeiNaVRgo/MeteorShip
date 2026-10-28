@@ -60,23 +60,28 @@ namespace ms::scene_logic::scenes {
         world->registerSystem<systems::PlayerSystem>();
         world->registerSystem<systems::MovementSystem>();
         world->registerSystem<systems::BehaviorSystem>();
-        world->registerSystem<systems::TurretSystem>(
-            inventory, game.getMainWindow(),
-            game.getAssetManager().textureMap.at("Bullets-spritesheet"));
+        world->registerSystem<systems::TurretSystem>(inventory, game.getMainWindow());
         world->registerSystem<systems::SpatialHash>(world->getQuadtree(), world->getEventDispatcher());
         world->registerSystem<systems::DrawingSystem>(game.getMainWindow());
 
         inventory.bindECS(world->getECS());
 
-        const auto& spellTexture = game.getAssetManager().textureMap.at("Bullets-spritesheet");
-        sf::Sprite fireIcon(spellTexture);
-        fireIcon.setTextureRect(sf::IntRect({0, 0}, {8, 8}));
-        sf::Sprite frostIcon(spellTexture);
-        frostIcon.setTextureRect(sf::IntRect({8, 0}, {8, 8}));
+        const auto& fireProjectile = game.getAssetManager().spriteMap.at("Fire-projectile");
+        const auto& frostProjectile = game.getAssetManager().spriteMap.at("Frost-projectile");
+        sf::Sprite fireIcon = fireProjectile.sprite;
+        sf::Sprite frostIcon = frostProjectile.sprite;
+        inventory::SpellStats fireStats;
+        fireStats.damage = {{components::DamageType::Projectile, 1.5f}};
         inventory.storeSpell(inventory::Spell(
-            "Fire", std::move(fireIcon), 1.5f, 1.f, sf::Color(255, 120, 45)));
+            "Fire", std::move(fireIcon), std::move(fireStats),
+            fireProjectile,
+            sf::Color(255, 120, 45)));
+        inventory::SpellStats frostStats;
+        frostStats.speed = 10;
         inventory.storeSpell(inventory::Spell(
-            "Frost", std::move(frostIcon), 1.f, 0.8f, sf::Color(100, 190, 255)));
+            "Frost", std::move(frostIcon), std::move(frostStats),
+            frostProjectile,
+            sf::Color(100, 190, 255)));
 
         const auto& turretTexture = game.getAssetManager().textureMap.at("JetFighter-Var3-Spritesheet");
         sf::Sprite turretIcon(turretTexture);
@@ -92,25 +97,6 @@ namespace ms::scene_logic::scenes {
 
         ui.root = std::make_unique<ui::UINode>();
         inventory.buildUI(*ui.root);
-
-        /*
-        auto label = std::make_unique<ui::UINode>(ui::widgets::LabelWidget{"Root Node"});
-        //label->size = {50, 15};
-        auto btn   = std::make_unique<ui::UINode>(ui::widgets::ButtonWidget{"Click Me", []{ std::cout << "button clicked\n"; }},
-                                             sf::Vector2f{50.f, 10.f});
-        btn->size = {50, 15};
-        auto sldr  = std::make_unique<ui::UINode>(ui::widgets::SliderWidget{0.7f},
-                                             sf::Vector2f{50.f, 100.f});
-        sldr->size = {50, 15};
-        auto nested = std::make_unique<ui::UINode>(ui::widgets::LabelWidget{"Nested Label"},
-                                              sf::Vector2f{40.f, 30.f});
-        //nested->size = {50, 15};
-        btn->addChild(std::move(nested));
-
-        ui.root->addChild(std::move(label));
-        ui.root->addChild(std::move(btn));
-        ui.root->addChild(std::move(sldr));
-        */
     }
 
     void SceneMain::init() {

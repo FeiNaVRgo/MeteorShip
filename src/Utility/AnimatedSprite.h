@@ -6,6 +6,9 @@
 #define METEORSHIP_ANIMATEDSPRITE_H
 
 #include <iostream>
+#include <optional>
+#include <vector>
+
 #include <SFML/Graphics/Sprite.hpp>
 #include <SFML/System/Clock.hpp>
 #include <SFML/System/Time.hpp>
@@ -32,11 +35,22 @@ namespace ms::utility {
               number_of_sprites(_number_of_sprites),
               order_of_sprites(_order_of_sprites)
         {
+            if (order_of_sprites && !order_of_sprites->empty()) {
+                rect.position.x = rect.size.x * order_of_sprites->front();
+            }
             sprite.setTextureRect(rect);
             sprite.setOrigin(sprite.getLocalBounds().getCenter());
         }
 
+        AnimatedSprite createInstance() const {
+            return AnimatedSprite(sprite.getTexture(), rect, number_of_sprites, order_of_sprites);
+        }
+
         void update() {
+            if (number_of_sprites <= 1 ||
+                (order_of_sprites && order_of_sprites->empty())) {
+                return;
+            }
             if (clock.getElapsedTime().asSeconds() > 1.0f) {
                 if (!order_of_sprites.has_value()) {
                     if (rect.position.x == rect.size.x * ( number_of_sprites - 1)) {
