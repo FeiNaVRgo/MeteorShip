@@ -135,19 +135,34 @@ namespace ms::inventory {
         if (statusWidget) statusWidget->text = result.message;
     }
 
+    Turret* Inventory::mountedTurret(const std::size_t turretIndex) {
+        if (turretIndex >= turrets.size() || !turrets[turretIndex] || !entityManager ||
+            !entityManager->isEntityAlive(*turrets[turretIndex]) ||
+            !entityManager->hasComponent<Turret>(*turrets[turretIndex])) {
+            return nullptr;
+        }
+        return &entityManager->getComponent<Turret>(*turrets[turretIndex]);
+    }
+
+    const Turret* Inventory::mountedTurret(const std::size_t turretIndex) const {
+        if (turretIndex >= turrets.size() || !turrets[turretIndex] || !entityManager ||
+            !entityManager->isEntityAlive(*turrets[turretIndex]) ||
+            !entityManager->hasComponent<Turret>(*turrets[turretIndex])) {
+            return nullptr;
+        }
+        return &entityManager->getComponent<Turret>(*turrets[turretIndex]);
+    }
+
     std::optional<ecs::Entity>* Inventory::spellSlot(const SlotAddress& address) {
         switch (address.collection) {
             case SlotCollection::SpellInventory:
                 return address.index < spells.size() ? &spells[address.index] : nullptr;
             case SlotCollection::TurretSpell:
-                if (address.turretIndex >= turrets.size() || !turrets[address.turretIndex] ||
-                    !entityManager || !entityManager->hasComponent<Turret>(*turrets[address.turretIndex]) ||
-                    address.index >= entityManager->getComponent<Turret>(
-                        *turrets[address.turretIndex]).spellOrder.size()) {
-                    return nullptr;
+                if (auto* turret = mountedTurret(address.turretIndex);
+                    turret && address.index < turret->spellOrder.size()) {
+                    return &turret->spellOrder[address.index];
                 }
-                return &entityManager->getComponent<Turret>(
-                    *turrets[address.turretIndex]).spellOrder[address.index];
+                return nullptr;
             case SlotCollection::TurretMount:
                 return nullptr;
         }
@@ -166,14 +181,11 @@ namespace ms::inventory {
             case SlotCollection::SpellInventory:
                 return address.index < spells.size() ? &spells[address.index] : nullptr;
             case SlotCollection::TurretSpell:
-                if (address.turretIndex >= turrets.size() || !turrets[address.turretIndex] ||
-                    !entityManager || !entityManager->hasComponent<Turret>(*turrets[address.turretIndex]) ||
-                    address.index >= entityManager->getComponent<Turret>(
-                        *turrets[address.turretIndex]).spellOrder.size()) {
-                    return nullptr;
+                if (const auto* turret = mountedTurret(address.turretIndex);
+                    turret && address.index < turret->spellOrder.size()) {
+                    return &turret->spellOrder[address.index];
                 }
-                return &entityManager->getComponent<Turret>(
-                    *turrets[address.turretIndex]).spellOrder[address.index];
+                return nullptr;
             case SlotCollection::TurretMount:
                 return nullptr;
         }
@@ -188,11 +200,8 @@ namespace ms::inventory {
     }
 
     std::size_t Inventory::turretSpellSlotCount(const std::size_t turretIndex) const {
-        if (turretIndex >= turrets.size() || !turrets[turretIndex] || !entityManager ||
-            !entityManager->hasComponent<Turret>(*turrets[turretIndex])) {
-            return 0;
-        }
-        return entityManager->getComponent<Turret>(*turrets[turretIndex]).spellSlotCount();
+        const auto* turret = mountedTurret(turretIndex);
+        return turret ? turret->spellSlotCount() : 0;
     }
 
     void Inventory::bindPlayerEntity(const ecs::Entity player) {
@@ -223,10 +232,7 @@ namespace ms::inventory {
     }
 
     const Turret* Inventory::turretAt(const std::size_t turretIndex) const {
-        if (turretIndex >= turrets.size() || !turrets[turretIndex] || !entityManager ||
-            !entityManager->isEntityAlive(*turrets[turretIndex]) ||
-            !entityManager->hasComponent<Turret>(*turrets[turretIndex])) return nullptr;
-        return &entityManager->getComponent<Turret>(*turrets[turretIndex]);
+        return mountedTurret(turretIndex);
     }
 
     bool Inventory::setSpell(const SlotAddress& address, Spell spell) {
@@ -236,11 +242,8 @@ namespace ms::inventory {
         entityManager->addComponent<Spell>(entity, std::move(spell));
         if (*slot) destroyStoredEntity(**slot);
         *slot = entity;
-        if (address.collection == SlotCollection::TurretSpell &&
-            address.turretIndex < turrets.size() && turrets[address.turretIndex] &&
-            entityManager->isEntityAlive(*turrets[address.turretIndex]) &&
-            entityManager->hasComponent<Turret>(*turrets[address.turretIndex])) {
-            entityManager->getComponent<Turret>(*turrets[address.turretIndex]).resetDeck();
+        if (address.collection == SlotCollection::TurretSpell) {
+            if (auto* turret = mountedTurret(address.turretIndex)) turret->resetDeck();
         }
         refreshUI();
         return true;
@@ -258,12 +261,9 @@ namespace ms::inventory {
     }
 
     bool Inventory::toggleTurretTargetMode(const std::size_t turretIndex) {
-        if (turretIndex >= turrets.size() || !turrets[turretIndex] || !entityManager ||
-            !entityManager->isEntityAlive(*turrets[turretIndex]) ||
-            !entityManager->hasComponent<Turret>(*turrets[turretIndex])) {
-            return false;
-        }
-        entityManager->getComponent<Turret>(*turrets[turretIndex]).toggleTargetMode();
+        auto* turret = mountedTurret(turretIndex);
+        if (!turret) return false;
+        turret->toggleTargetMode();
         refreshUI();
         return true;
     }
@@ -322,11 +322,8 @@ namespace ms::inventory {
         if (!slot || !*slot) return std::nullopt;
         const auto removed = **slot;
         slot->reset();
-        if (address.collection == SlotCollection::TurretSpell &&
-            address.turretIndex < turrets.size() && turrets[address.turretIndex] &&
-            entityManager && entityManager->isEntityAlive(*turrets[address.turretIndex]) &&
-            entityManager->hasComponent<Turret>(*turrets[address.turretIndex])) {
-            entityManager->getComponent<Turret>(*turrets[address.turretIndex]).resetDeck();
+        if (address.collection == SlotCollection::TurretSpell) {
+            if (auto* turret = mountedTurret(address.turretIndex)) turret->resetDeck();
         }
         if (selectedSlot && *selectedSlot == address) selectedSlot.reset();
         refreshUI();
@@ -380,23 +377,17 @@ namespace ms::inventory {
     }
 
     std::optional<std::size_t> Inventory::addTurretSpellSlot(const std::size_t turretIndex) {
-        if (turretIndex >= turrets.size() || !turrets[turretIndex] || !entityManager ||
-            !entityManager->isEntityAlive(*turrets[turretIndex]) ||
-            !entityManager->hasComponent<Turret>(*turrets[turretIndex])) return std::nullopt;
-        auto& turret = entityManager->getComponent<Turret>(*turrets[turretIndex]);
-        const auto previousCount = turret.spellSlotCount();
-        const auto addedSlot = turret.addSpellSlot();
-        if (turret.spellSlotCount() == previousCount) return std::nullopt;
+        auto* turret = mountedTurret(turretIndex);
+        if (!turret) return std::nullopt;
+        const auto previousCount = turret->spellSlotCount();
+        const auto addedSlot = turret->addSpellSlot();
+        if (turret->spellSlotCount() == previousCount) return std::nullopt;
         refreshUI();
         return addedSlot;
     }
 
     bool Inventory::removeTurretSpellSlot(const std::size_t turretIndex, const std::size_t slotIndex) {
-        auto* turret = turretIndex < turrets.size() && turrets[turretIndex] && entityManager &&
-            entityManager->isEntityAlive(*turrets[turretIndex]) &&
-            entityManager->hasComponent<Turret>(*turrets[turretIndex])
-                ? &entityManager->getComponent<Turret>(*turrets[turretIndex])
-                : nullptr;
+        auto* turret = mountedTurret(turretIndex);
         if (!turret || !turret->removeSpellSlot(slotIndex)) return false;
         if (selectedSlot && selectedSlot->collection == SlotCollection::TurretSpell &&
             selectedSlot->turretIndex == turretIndex) {
@@ -411,11 +402,7 @@ namespace ms::inventory {
     }
 
     bool Inventory::resizeTurretSpellSlots(const std::size_t turretIndex, const std::size_t count) {
-        auto* turret = turretIndex < turrets.size() && turrets[turretIndex] && entityManager &&
-            entityManager->isEntityAlive(*turrets[turretIndex]) &&
-            entityManager->hasComponent<Turret>(*turrets[turretIndex])
-                ? &entityManager->getComponent<Turret>(*turrets[turretIndex])
-                : nullptr;
+        auto* turret = mountedTurret(turretIndex);
         if (!turret) return false;
         const auto oldCount = turret->spellSlotCount();
         if (!turret->resizeSpellSlots(count)) return false;
@@ -441,13 +428,9 @@ namespace ms::inventory {
                 !entityManager->hasComponent<Spell>(**sourceSlot)) return false;
             sourceSlot->swap(*destinationSlot);
             for (const auto& address : {source, destination}) {
-                if (address.collection != SlotCollection::TurretSpell ||
-                    address.turretIndex >= turrets.size() || !turrets[address.turretIndex] ||
-                    !entityManager->isEntityAlive(*turrets[address.turretIndex]) ||
-                    !entityManager->hasComponent<Turret>(*turrets[address.turretIndex])) {
-                    continue;
+                if (address.collection == SlotCollection::TurretSpell) {
+                    if (auto* turret = mountedTurret(address.turretIndex)) turret->resetDeck();
                 }
-                entityManager->getComponent<Turret>(*turrets[address.turretIndex]).resetDeck();
             }
             return true;
         }
@@ -468,12 +451,8 @@ namespace ms::inventory {
         if (!slot || !*slot) return false;
         destroyStoredEntity(**slot);
         slot->reset();
-        if (address.collection == SlotCollection::TurretSpell &&
-            address.turretIndex < turrets.size() && turrets[address.turretIndex] &&
-            entityManager &&
-            entityManager->isEntityAlive(*turrets[address.turretIndex]) &&
-            entityManager->hasComponent<Turret>(*turrets[address.turretIndex])) {
-            entityManager->getComponent<Turret>(*turrets[address.turretIndex]).resetDeck();
+        if (address.collection == SlotCollection::TurretSpell) {
+            if (auto* turret = mountedTurret(address.turretIndex)) turret->resetDeck();
         }
         if (selectedSlot && *selectedSlot == address) selectedSlot.reset();
         refreshUI();

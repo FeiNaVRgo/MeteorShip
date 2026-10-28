@@ -11,6 +11,7 @@
 #include <optional>
 #include <algorithm>
 #include <memory>
+#include <vector>
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics.hpp>
 #include "ECS/ECS.h"
@@ -129,12 +130,12 @@ namespace ms::systems {
             insert(entity, newBounds);
         }
 
-        [[nodiscard]] std::list<ecs::Entity> query(const sf::FloatRect& bounds) const {
+        [[nodiscard]] std::vector<ecs::Entity> query(const sf::FloatRect& bounds) const {
             return query(bounds, root.get());
         }
 
-        [[nodiscard]] std::list<ecs::Entity> queryAll() const {
-            std::list<ecs::Entity> result;
+        [[nodiscard]] std::vector<ecs::Entity> queryAll() const {
+            std::vector<ecs::Entity> result;
             queryAll(root.get(), result);
             return result;
         }
@@ -244,9 +245,9 @@ namespace ms::systems {
             return true;
         }
 
-        std::list<ecs::Entity> query(const sf::FloatRect& bounds, Node* node) const {
+        std::vector<ecs::Entity> query(const sf::FloatRect& bounds, Node* node) const {
             std::queue<Node*> queue;
-            std::list<ecs::Entity> entities;
+            std::vector<ecs::Entity> entities;
             queue.push(node);
 
             while (!queue.empty()) {
@@ -273,7 +274,7 @@ namespace ms::systems {
             return entities;
         }
 
-        static void queryAll(Node const* node, std::list<ecs::Entity>& result) {
+        static void queryAll(Node const* node, std::vector<ecs::Entity>& result) {
             if (node->isLeaf() && node->entities.has_value()) {
                 for (const auto &ent: *node->entities) {
                     result.push_back(ent);

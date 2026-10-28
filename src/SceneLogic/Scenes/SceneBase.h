@@ -27,7 +27,7 @@ namespace ms::scene_logic::scenes {
         ui::UI ui;
     public:
         SceneBase(Game &game, std::string name);
-        //virtual ~SceneBase() = default;
+        virtual ~SceneBase() = default;
 
         std::string const& getName() { return name; }
         std::shared_ptr<World> getWorld() { return world; }

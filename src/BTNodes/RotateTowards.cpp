@@ -6,12 +6,12 @@
 
 #include <algorithm>
 #include <cmath>
-#include <numbers>
 
 #include "BTContext.h"
 #include "Components/Player.h"
 #include "Components/Transform.h"
 #include "ECS/World.h"
+#include "Utility/UtiFuncs.h"
 
 namespace ms::bt_nodes {
     RotateTowards::RotateTowards(std::string const& name, BT::NodeConfig const& config)
@@ -62,7 +62,7 @@ namespace ms::bt_nodes {
             return BT::NodeStatus::SUCCESS;
         }
 
-        const float targetDegrees = std::atan2(direction.x, -direction.y) * 180.f / std::numbers::pi_v<float>;
+        const float targetDegrees = utility::rotationFromDirection(direction).asDegrees();
         const float currentDegrees = transform.getRotation().asDegrees();
         if (!std::isfinite(currentDegrees)) {
             return BT::NodeStatus::FAILURE;

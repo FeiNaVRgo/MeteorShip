@@ -46,7 +46,7 @@ namespace ms::inventory {
         float cycleRechargeModifier = 0.f;
         std::vector<std::size_t> deckOrder;
         std::size_t deckCursor = 0;
-        std::mt19937 randomEngine{std::random_device{}()};
+        std::mt19937 randomEngine{std::random_device{}()}; //this is bs btw generation of random  numbers should be delegated to its own class (singleton i think)
         TurretTargetMode targetMode = TurretTargetMode::Automatic;
 
     public:

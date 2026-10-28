@@ -6,6 +6,7 @@
 #define METEORSHIP_WORLD_H
 
 #include <memory>
+#include <utility>
 #include "ECS.h"
 #include "Events/EventDispatcher.h"
 #include "Systems/SpatialHashing/Quadtree.h"
@@ -30,7 +31,7 @@ namespace ms {
 
         template<typename T, typename... Args>
         void registerSystem(Args&&... args) {
-            ecs.registerSystem<T>(args...);
+            ecs.registerSystem<T>(std::forward<Args>(args)...);
         }
     };
 

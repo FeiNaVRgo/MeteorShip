@@ -1,54 +1,113 @@
 #ifndef METEORSHIP_SPELL_H
 #define METEORSHIP_SPELL_H
 
-#include <algorithm>
 #include <cstddef>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 
 #include "Components/Damage.h"
+#include "ECS/ECS.h"
 #include "Utility/AnimatedSprite.h"
 
 namespace ms::inventory {
-    struct SpellStats {
+    struct SpellCastingStats {
         std::size_t uses = std::numeric_limits<std::size_t>::max();
         float castDelay = 0.f;
         float rechargeTime = 0.f;
         float manaCost = 1.f;
+    };
+
+    struct ProjectileStats {
         float spreadModification = 0.f;
         float radius = 0.f;
         float speed = 260.f;
         float critChanceBonus = 0.f;
+        float lifeTime = 0.f;
+        float timerLifeTime = 0.f;
+        bool friendlyFire = false;
+        bool piercing = false;
+        bool penetrating = false;
+        bool homing = false;
+        float homingTurnRate = 0.f;
+        std::optional<float> maxTravelDistance;
         std::vector<components::DamageAmount> damage{
             {.type = components::DamageType::Projectile, .amount = 1.f}
         };
     };
 
+    using ProjectileEffect = std::function<void(ecs::ECS&, ecs::Entity)>;
+
+    struct ProjectileSpell {
+        ProjectileStats stats;
+    };
+
+    struct StaticProjectileSpell {
+        ProjectileStats stats;
+    };
+
+    struct MaterialSpell {
+        ProjectileStats stats;
+    };
+
+    struct ModifierSpell {
+        ProjectileEffect effect;
+    };
+
+    struct UtilitySpell {
+        ProjectileEffect effect;
+    };
+
+    struct MulticastSpell {
+        std::size_t followingSpells = 1;
+    };
+
+    struct PassiveSpell {};
+    struct OtherSpell {};
+
+    using SpellBehavior = std::variant<
+        ProjectileSpell,
+        StaticProjectileSpell,
+        MaterialSpell,
+        ModifierSpell,
+        UtilitySpell,
+        MulticastSpell,
+        PassiveSpell,
+        OtherSpell
+    >;
+
     class Spell {
         std::string name;
         std::optional<sf::Sprite> icon;
         std::optional<utility::AnimatedSprite> projectileAnimation;
-        SpellStats stats;
+        SpellBehavior behavior;
+        SpellCastingStats castingStats;
         sf::Color projectileTint = sf::Color::White;
         std::size_t usesRemaining;
 
     public:
-        explicit Spell(std::string name, std::optional<sf::Sprite> icon = std::nullopt,
-                       SpellStats stats = {},
-                       std::optional<utility::AnimatedSprite> projectileAnimation = std::nullopt,
-                       const sf::Color projectileTint = sf::Color::White)
+        explicit Spell(
+            std::string name,
+            SpellBehavior behavior = ProjectileSpell{},
+            std::optional<sf::Sprite> icon = std::nullopt,
+            std::optional<utility::AnimatedSprite> projectileAnimation = std::nullopt,
+            const sf::Color projectileTint = sf::Color::White,
+            SpellCastingStats castingStats = {})
             : name(std::move(name)),
               icon(std::move(icon)),
               projectileAnimation(std::move(projectileAnimation)),
-              stats(std::move(stats)),
+              behavior(std::move(behavior)),
+              castingStats(std::move(castingStats)),
               projectileTint(projectileTint),
-              usesRemaining(this->stats.uses) {}
+              usesRemaining(this->castingStats.uses) {}
 
         const std::string& getName() const { return name; }
         const sf::Sprite* getIcon() const { return icon ? &*icon : nullptr; }
@@ -58,14 +117,84 @@ namespace ms::inventory {
             return utility::AnimatedSprite(
                 icon->getTexture(), icon->getTextureRect(), 1, std::nullopt);
         }
-        const SpellStats& getStats() const { return stats; }
+        const SpellBehavior& getBehavior() const { return behavior; }
+        const SpellCastingStats& getCastingStats() const { return castingStats; }
+        std::size_t getUsesRemaining() const { return usesRemaining; }
         sf::Color getProjectileTint() const { return projectileTint; }
-        bool canCast() const { return usesRemaining > 0; }
+        bool canCast() const {
+            return std::holds_alternative<PassiveSpell>(behavior) || usesRemaining > 0;
+        }
 
         bool consumeUse() {
             if (!canCast()) return false;
+            if (std::holds_alternative<PassiveSpell>(behavior)) return true;
             if (usesRemaining != std::numeric_limits<std::size_t>::max()) --usesRemaining;
             return true;
+        }
+    };
+
+    struct PayloadSpell {
+        ProjectileStats stats;
+        sf::Color tint;
+        std::optional<utility::AnimatedSprite> projectileAnimation;
+        std::vector<ProjectileEffect> effects;
+
+        std::optional<utility::AnimatedSprite> createProjectileSprite() const {
+            if (!projectileAnimation) return std::nullopt;
+            return projectileAnimation->createInstance();
+        }
+    };
+
+    class Payload {
+        std::vector<PayloadSpell> spells;
+        std::vector<ProjectileEffect> pendingEffects;
+
+    public:
+        [[nodiscard]] bool empty() const { return spells.empty(); }
+        [[nodiscard]] std::size_t size() const { return spells.size(); }
+        [[nodiscard]] const std::vector<PayloadSpell>& getSpells() const { return spells; }
+
+        void clear() {
+            spells.clear();
+            pendingEffects.clear();
+        }
+
+        [[nodiscard]] std::size_t addSpell(const Spell& spell) {
+            const auto& behavior = spell.getBehavior();
+            return std::visit([this, &spell](const auto& spellBehavior) -> std::size_t {
+                using T = std::decay_t<decltype(spellBehavior)>;
+                if constexpr (std::is_same_v<T, ModifierSpell> ||
+                              std::is_same_v<T, UtilitySpell>) {
+                    if (spellBehavior.effect) pendingEffects.push_back(spellBehavior.effect);
+                    return 0;
+                } else if constexpr (std::is_same_v<T, MulticastSpell>) {
+                    return spellBehavior.followingSpells;
+                } else if constexpr (std::is_same_v<T, ProjectileSpell>) {
+                    addProjectile(spell, spellBehavior.stats);
+                    return 0;
+                } else if constexpr (std::is_same_v<T, StaticProjectileSpell>) {
+                    auto stats = spellBehavior.stats;
+                    stats.speed = 0.f;
+                    addProjectile(spell, std::move(stats));
+                    return 0;
+                } else if constexpr (std::is_same_v<T, MaterialSpell>) {
+                    addProjectile(spell, spellBehavior.stats, false);
+                    return 0;
+                } else {
+                    return 0;
+                }
+            }, behavior);
+        }
+
+    private:
+        void addProjectile(const Spell& spell, ProjectileStats stats,
+                           const bool applyEffects = true) {
+            spells.push_back({
+                .stats = std::move(stats),
+                .tint = spell.getProjectileTint(),
+                .projectileAnimation = spell.createProjectileSprite(),
+                .effects = applyEffects ? pendingEffects : std::vector<ProjectileEffect>{}
+            });
         }
     };
 }

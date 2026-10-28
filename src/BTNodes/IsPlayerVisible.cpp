@@ -10,6 +10,7 @@
 #include "Components/Player.h"
 #include "Components/Transform.h"
 #include "ECS/World.h"
+#include "Utility/UtiFuncs.h"
 
 namespace ms::bt_nodes {
     IsPlayerVisible::IsPlayerVisible(std::string const &name, BT::NodeConfiguration const &config): BT::ConditionNode(name, config) {}
@@ -55,8 +56,8 @@ namespace ms::bt_nodes {
         const auto enemyPosition = ecs.getComponent<components::Transform>(enemy).getPosition();
         const auto playerPosition = ecs.getComponent<components::Transform>(*playerEntity).getPosition();
         const float sightRangeSquared = sightRange.value() * sightRange.value();
-        const auto offset = playerPosition - enemyPosition;
-        const bool visible = offset.x * offset.x + offset.y * offset.y <= sightRangeSquared;
+        const bool visible =
+            utility::squaredDistance(enemyPosition, playerPosition) <= sightRangeSquared;
 
         setOutput("player_visible", visible);
         return visible ? BT::NodeStatus::SUCCESS : BT::NodeStatus::FAILURE;

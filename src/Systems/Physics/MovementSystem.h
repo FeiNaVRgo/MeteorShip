@@ -8,6 +8,7 @@
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
 #include "ECS/ECS.h"
+#include "Utility/UtiFuncs.h"
 
 namespace ms::systems {
     class MovementSystem : public ecs::System {
@@ -22,7 +23,8 @@ namespace ms::systems {
                         rigidbody.velocity += rigidbody.acceleration * deltaTime;
                         transform.move(rigidbody.velocity * deltaTime);
                         
-                        rigidbody.bounds.position = transform.getPosition() - rigidbody.bounds.size / 2.f;
+                        rigidbody.bounds = utility::centeredRect(
+                            transform.getPosition(), rigidbody.bounds.size);
                     }
             );
         }

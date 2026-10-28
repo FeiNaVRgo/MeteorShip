@@ -10,7 +10,9 @@
 #include <cstdint>
 #include <memory>
 #include <ostream>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 #include <cassert>
 #include <functional>
@@ -131,7 +133,7 @@ namespace ms {
 
         class ComponentManager {
         private:
-            std::array<IComponentPool*, MAX_COMPONENTS> componentPools{};
+            std::array<std::unique_ptr<IComponentPool>, MAX_COMPONENTS> componentPools{};
             ComponentType numComponents = 0;
 
             template<typename T>
@@ -142,32 +144,22 @@ namespace ms {
                     throw std::runtime_error("Component type ID out of range!");
                 }
 
-                if (componentPools[id] == nullptr) {
-                    componentPools[id] = new SparseSet<T>();
+                if (!componentPools[id]) {
+                    componentPools[id] = std::make_unique<SparseSet<T>>();
                 }
 
-                return *static_cast<SparseSet<T>*>(componentPools[id]);
+                return *static_cast<SparseSet<T>*>(componentPools[id].get());
             }
 
             template<typename T>
             const SparseSet<T>& getPool() const {
                 const ComponentType id = ComponentTypeId<T>::get();
                 assert(id < numComponents && componentPools[id] != nullptr);
-                return *static_cast<const SparseSet<T>*>(componentPools[id]);
+                return *static_cast<const SparseSet<T>*>(componentPools[id].get());
             }
         public:
-            ComponentManager() {
-                componentPools.fill(nullptr);
-            }
-
-            ~ComponentManager() {
-                for (const auto* componentPool : componentPools) {
-                    delete componentPool;
-                }
-            }
-
             void removeComponentByType(const Entity entity, const ComponentType type) const {
-                if (type >= numComponents || componentPools[type] == nullptr) return;
+                if (type >= numComponents || !componentPools[type]) return;
                 componentPools[type]->remove(entity);
             }
 
@@ -181,8 +173,12 @@ namespace ms {
 
             template<typename T>
             void registerComponent() {
-                if (const ComponentType id = ComponentTypeId<T>::get(); componentPools[id] == nullptr) {
-                    componentPools[id] = new SparseSet<T>();
+                const ComponentType id = ComponentTypeId<T>::get();
+                if (id >= MAX_COMPONENTS) {
+                    throw std::runtime_error("Component type ID out of range!");
+                }
+                if (!componentPools[id]) {
+                    componentPools[id] = std::make_unique<SparseSet<T>>();
                     numComponents++;
                 }
             }

@@ -25,9 +25,9 @@ namespace ms::scene_logic {
 
         template<typename T, typename... Args>
         void addScene(Args&&... args) {
-            auto scene = std::make_unique<T>(std::forward<Args>(args)...);
-            worlds.push_back(scene->getWorld());
-            scenes.try_emplace(scene->getName(), std::move(scene));
+            std::unique_ptr<scenes::SceneBase> scene =
+                std::make_unique<T>(std::forward<Args>(args)...);
+            addScene(std::move(scene));
         }
 
         [[nodiscard]] scenes::SceneBase* getCurrentScene() const {return currentScene;}

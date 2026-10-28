@@ -4,6 +4,8 @@
 
 #include "SceneManager.h"
 
+#include <stdexcept>
+
 namespace ms::scene_logic {
     SceneManager::SceneManager(std::vector<std::shared_ptr<World>>& worlds)
     : currentScene(nullptr),
@@ -23,8 +25,13 @@ namespace ms::scene_logic {
 
 
     void SceneManager::addScene(std::unique_ptr<scenes::SceneBase> scene) {
-        worlds.push_back(scene->getWorld());
-        scenes.try_emplace(scene->getName(), std::move(scene));
+        if (!scene) throw std::invalid_argument("Cannot register a null scene.");
+        const auto name = scene->getName();
+        const auto [iterator, inserted] = scenes.try_emplace(name, std::move(scene));
+        if (!inserted) {
+            throw std::logic_error("A scene named '" + name + "' is already registered.");
+        }
+        worlds.push_back(iterator->second->getWorld());
     }
 
 }

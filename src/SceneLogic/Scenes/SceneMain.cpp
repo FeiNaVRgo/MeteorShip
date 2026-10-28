@@ -4,6 +4,7 @@
 
 #include "SceneMain.h"
 #include "Game.h"
+#include "Utility/UtiFuncs.h"
 #include <fstream>
 #include <sstream>
 #include <utility>
@@ -60,8 +61,9 @@ namespace ms::scene_logic::scenes {
         world->registerSystem<systems::PlayerSystem>();
         world->registerSystem<systems::MovementSystem>();
         world->registerSystem<systems::BehaviorSystem>();
-        world->registerSystem<systems::TurretSystem>(inventory, game.getMainWindow());
         world->registerSystem<systems::SpatialHash>(world->getQuadtree(), world->getEventDispatcher());
+        world->registerSystem<systems::TurretSystem>(
+            inventory, game.getMainWindow(), world->getQuadtree());
         world->registerSystem<systems::DrawingSystem>(game.getMainWindow());
 
         inventory.bindECS(world->getECS());
@@ -70,16 +72,16 @@ namespace ms::scene_logic::scenes {
         const auto& frostProjectile = game.getAssetManager().spriteMap.at("Frost-projectile");
         sf::Sprite fireIcon = fireProjectile.sprite;
         sf::Sprite frostIcon = frostProjectile.sprite;
-        inventory::SpellStats fireStats;
+        inventory::ProjectileStats fireStats;
         fireStats.damage = {{components::DamageType::Projectile, 1.5f}};
         inventory.storeSpell(inventory::Spell(
-            "Fire", std::move(fireIcon), std::move(fireStats),
+            "Fire", inventory::ProjectileSpell{std::move(fireStats)}, std::move(fireIcon),
             fireProjectile,
             sf::Color(255, 120, 45)));
-        inventory::SpellStats frostStats;
+        inventory::ProjectileStats frostStats;
         frostStats.speed = 10;
         inventory.storeSpell(inventory::Spell(
-            "Frost", std::move(frostIcon), std::move(frostStats),
+            "Frost", inventory::ProjectileSpell{std::move(frostStats)}, std::move(frostIcon),
             frostProjectile,
             sf::Color(100, 190, 255)));
 
@@ -135,8 +137,7 @@ namespace ms::scene_logic::scenes {
 
         components::Rigidbody rigidbody{};
         auto rect = drawable.sprite.value().sprite.getLocalBounds();
-        rect.position = transform.getPosition();
-        rigidbody.bounds = rect;
+        rigidbody.bounds = utility::centeredRect(transform.getPosition(), rect.size);
         world->getECS().addComponent<components::Rigidbody>(player, rigidbody);
 
         world->getQuadtree().insert(player, rigidbody.bounds);
@@ -159,8 +160,7 @@ namespace ms::scene_logic::scenes {
 
         components::Rigidbody rigidbody{};
         auto rect = drawable.sprite.value().sprite.getLocalBounds();
-        rect.position = transform.getPosition();
-        rigidbody.bounds = rect;
+        rigidbody.bounds = utility::centeredRect(transform.getPosition(), rect.size);
         world->getECS().addComponent<components::Rigidbody>(enemy, rigidbody);
 
         world->getQuadtree().insert(enemy, rigidbody.bounds);

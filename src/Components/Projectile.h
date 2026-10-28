@@ -1,6 +1,7 @@
 #ifndef METEORSHIP_PROJECTILE_H
 #define METEORSHIP_PROJECTILE_H
 
+#include <optional>
 #include <vector>
 
 #include "Components/Damage.h"
@@ -13,6 +14,12 @@ namespace ms::components {
         std::vector<DamageAmount> damageTypes{{DamageType::Projectile, 1.f}};
         float radius = 0.f;
         float critChanceBonus = 0.f;
+        float lifeTime = 0.f;
+        float timerLifeTime = 0.f;
+        bool friendlyFire = false;
+        bool piercing = false;
+        bool penetrating = false;
+        std::optional<float> maxTravelDistance;
     };
 }
 

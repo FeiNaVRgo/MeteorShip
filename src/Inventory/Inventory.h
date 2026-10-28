@@ -93,6 +93,8 @@ namespace ms::inventory {
         void refreshUI();
         void handleSlotClick(const SlotAddress& address);
 
+        Turret* mountedTurret(std::size_t turretIndex);
+        const Turret* mountedTurret(std::size_t turretIndex) const;
         std::optional<ecs::Entity>* spellSlot(const SlotAddress& address);
         std::optional<ecs::Entity>* turretSlot(const SlotAddress& address);
         const std::optional<ecs::Entity>* spellSlot(const SlotAddress& address) const;

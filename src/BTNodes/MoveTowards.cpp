@@ -7,6 +7,7 @@
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
 #include "ECS/World.h"
+#include "Utility/UtiFuncs.h"
 
 namespace ms::bt_nodes {
     MoveTowards::MoveTowards(std::string const& name, BT::NodeConfig const& config)
@@ -52,13 +53,13 @@ namespace ms::bt_nodes {
 
         const auto playerPosition = ecs.getComponent<components::Transform>(*playerEntity).getPosition();
         const auto direction = playerPosition - ecs.getComponent<components::Transform>(entity).getPosition();
-        const float distance = direction.length();
-        if (distance <= 0.001f) {
+        const float distanceSquared = utility::squaredLength(direction);
+        if (distanceSquared <= 0.001f * 0.001f) {
             rigidbody.velocity = {};
             return BT::NodeStatus::SUCCESS;
         }
 
-        rigidbody.velocity = direction / distance * speed.value();
+        rigidbody.velocity = direction / std::sqrt(distanceSquared) * speed.value();
         return BT::NodeStatus::SUCCESS;
     }
 }
