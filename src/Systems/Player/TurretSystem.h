@@ -144,9 +144,7 @@ namespace ms::systems {
                     continue;
                 }
                 auto& turret = ecs->getComponent<inventory::Turret>(turretEntity);
-                if (turret.readyToShoot()) {
-                    turret.shoot(*ecs, owner, origin, aimAngleRadians);
-                }
+                turret.shoot(*ecs, owner, origin, aimAngleRadians);
             }
         }
 

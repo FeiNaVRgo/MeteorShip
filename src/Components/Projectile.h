@@ -19,6 +19,8 @@ namespace ms::components {
         bool friendlyFire = false;
         bool piercing = false;
         bool penetrating = false;
+        bool homing = false;
+        float homingTurnRate = 0.f;
         std::optional<float> maxTravelDistance;
     };
 }

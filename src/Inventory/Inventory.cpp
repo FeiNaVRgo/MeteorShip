@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include "Components/Drawable.h"
+#include "Components/Transform.h"
 #include "UI/UINode.h"
 
 namespace ms::inventory {

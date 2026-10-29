@@ -10,10 +10,6 @@
 
 #include <SFML/Graphics/Sprite.hpp>
 
-#include "Components/Projectile.h"
-#include "Components/Drawable.h"
-#include "Components/Rigidbody.h"
-#include "Components/Transform.h"
 #include "ECS/ECS.h"
 #include "Spell.h"
 
@@ -66,8 +62,8 @@ namespace ms::inventory {
         bool readyToShoot() const {
             return castDelayRemaining <= 0.f && rechargeRemaining <= 0.f;
         }
-        std::size_t shoot(ecs::ECS& entityManager, ecs::Entity owner, sf::Vector2f origin,
-                          float aimAngleRadians);
+        void shoot(ecs::ECS& entityManager, ecs::Entity owner, sf::Vector2f origin,
+                   float aimAngleRadians);
         void resetDeck();
         std::optional<ecs::Entity> spellEntityAt(std::size_t index) const;
         bool setSpellEntity(std::size_t index, ecs::Entity spell);

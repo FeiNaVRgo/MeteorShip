@@ -4,6 +4,10 @@
 #include <cmath>
 #include <utility>
 
+#include "Components/Drawable.h"
+#include "Components/Projectile.h"
+#include "Components/Rigidbody.h"
+#include "Components/Transform.h"
 #include "Utility/UtiFuncs.h"
 
 namespace ms::inventory {
@@ -99,14 +103,14 @@ namespace ms::inventory {
         cycleRechargeModifier = 0.f;
     }
 
-    std::size_t Turret::shoot(ecs::ECS& entityManager, const ecs::Entity owner,
-                              const sf::Vector2f origin, const float aimAngleRadians) {
-        if (!readyToShoot()) return 0;
+    void Turret::shoot(ecs::ECS& entityManager, const ecs::Entity owner,
+                       const sf::Vector2f origin, const float aimAngleRadians) {
+        if (!readyToShoot()) return;
         if (deckCursor >= deckOrder.size()) resetDeck();
-        if (deckOrder.empty()) return 0;
+        if (deckOrder.empty()) return;
 
         Payload payload;
-        std::size_t consumedCount = 0;
+        bool castSpell = false;
         float castDelay = stats.castDelay;
         const auto castLimit = std::max<std::size_t>(1, stats.spellsPerCast);
         const auto availableDraws = deckOrder.size() - deckCursor;
@@ -133,11 +137,10 @@ namespace ms::inventory {
             const auto followingDraws = std::min(
                 multicastDraws, availableDraws - (drawn + 1));
             drawLimit = std::max(drawLimit, drawn + 1 + followingDraws);
-            ++consumedCount;
+            castSpell = true;
         }
 
         const auto& payloadSpells = payload.getSpells();
-        const auto projectileCount = payloadSpells.size();
         const float spreadCenter = (static_cast<float>(payloadSpells.size()) - 1.f) / 2.f;
         for (std::size_t index = 0; index < payloadSpells.size(); ++index) {
             const auto& payloadSpell = payloadSpells[index];
@@ -149,12 +152,11 @@ namespace ms::inventory {
             createProjectile(entityManager, owner, origin, projectileAngle, payloadSpell, stats);
         }
 
-        if (consumedCount > 0) castDelayRemaining = std::max(0.f, castDelay);
+        if (castSpell) castDelayRemaining = std::max(0.f, castDelay);
         if (deckCursor >= deckOrder.size()) {
             rechargeRemaining = std::max(0.f, stats.rechargeTime + cycleRechargeModifier);
             cycleRechargeModifier = 0.f;
         }
-        return projectileCount;
     }
 
     std::optional<ecs::Entity> Turret::spellEntityAt(const std::size_t index) const {

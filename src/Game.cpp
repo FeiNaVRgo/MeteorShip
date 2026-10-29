@@ -33,7 +33,6 @@
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
 #include "Components/Player.h"
-#include "Components/ShootingAccess.h"
 #include "Events/EventDispatcher.h"
 #include "SceneLogic/Scenes/SceneMainMenu.h"
 #include "SceneLogic/Scenes/SceneSettings.h"
@@ -91,7 +90,6 @@ namespace ms
         worldBox.registerComponent<components::Transform>();
         worldBox.registerComponent<components::Drawable>();
         worldBox.registerComponent<components::Player>();
-        worldBox.registerComponent<components::ShootingAccess>();
         worldBox.registerComponent<components::BehaviorTree>();
         worldBox.registerComponent<components::Enemy>();
         worldBox.registerComponent<components::TurretMountLayout>();

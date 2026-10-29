@@ -46,42 +46,34 @@ namespace ms::inventory {
 
     using ProjectileEffect = std::function<void(ecs::ECS&, ecs::Entity)>;
 
+    enum class ProjectileKind {
+        Moving,
+        Stationary,
+        Material
+    };
+
     struct ProjectileSpell {
         ProjectileStats stats;
-    };
-
-    struct StaticProjectileSpell {
-        ProjectileStats stats;
-    };
-
-    struct MaterialSpell {
-        ProjectileStats stats;
+        ProjectileKind kind = ProjectileKind::Moving;
     };
 
     struct ModifierSpell {
         ProjectileEffect effect;
     };
 
-    struct UtilitySpell {
-        ProjectileEffect effect;
-    };
+    using UtilitySpell = ModifierSpell;
 
     struct MulticastSpell {
         std::size_t followingSpells = 1;
     };
 
     struct PassiveSpell {};
-    struct OtherSpell {};
 
     using SpellBehavior = std::variant<
         ProjectileSpell,
-        StaticProjectileSpell,
-        MaterialSpell,
         ModifierSpell,
-        UtilitySpell,
         MulticastSpell,
-        PassiveSpell,
-        OtherSpell
+        PassiveSpell
     >;
 
     class Spell {
@@ -119,7 +111,6 @@ namespace ms::inventory {
         }
         const SpellBehavior& getBehavior() const { return behavior; }
         const SpellCastingStats& getCastingStats() const { return castingStats; }
-        std::size_t getUsesRemaining() const { return usesRemaining; }
         sf::Color getProjectileTint() const { return projectileTint; }
         bool canCast() const {
             return std::holds_alternative<PassiveSpell>(behavior) || usesRemaining > 0;
@@ -150,35 +141,23 @@ namespace ms::inventory {
         std::vector<ProjectileEffect> pendingEffects;
 
     public:
-        [[nodiscard]] bool empty() const { return spells.empty(); }
-        [[nodiscard]] std::size_t size() const { return spells.size(); }
         [[nodiscard]] const std::vector<PayloadSpell>& getSpells() const { return spells; }
-
-        void clear() {
-            spells.clear();
-            pendingEffects.clear();
-        }
 
         [[nodiscard]] std::size_t addSpell(const Spell& spell) {
             const auto& behavior = spell.getBehavior();
             return std::visit([this, &spell](const auto& spellBehavior) -> std::size_t {
                 using T = std::decay_t<decltype(spellBehavior)>;
-                if constexpr (std::is_same_v<T, ModifierSpell> ||
-                              std::is_same_v<T, UtilitySpell>) {
+                if constexpr (std::is_same_v<T, ModifierSpell>) {
                     if (spellBehavior.effect) pendingEffects.push_back(spellBehavior.effect);
                     return 0;
                 } else if constexpr (std::is_same_v<T, MulticastSpell>) {
                     return spellBehavior.followingSpells;
                 } else if constexpr (std::is_same_v<T, ProjectileSpell>) {
-                    addProjectile(spell, spellBehavior.stats);
-                    return 0;
-                } else if constexpr (std::is_same_v<T, StaticProjectileSpell>) {
                     auto stats = spellBehavior.stats;
-                    stats.speed = 0.f;
-                    addProjectile(spell, std::move(stats));
-                    return 0;
-                } else if constexpr (std::is_same_v<T, MaterialSpell>) {
-                    addProjectile(spell, spellBehavior.stats, false);
+                    if (spellBehavior.kind == ProjectileKind::Stationary) stats.speed = 0.f;
+                    addProjectile(
+                        spell, std::move(stats),
+                        spellBehavior.kind != ProjectileKind::Material);
                     return 0;
                 } else {
                     return 0;
