@@ -58,7 +58,7 @@ namespace ms::inventory {
         //think about how to handle trigger spells
     };
 
-    enum class w {
+    enum class PLACEHOLDER_ {
         PhysicalSpell,
         ModifySpell,
         ChangeDrawSpell
@@ -126,7 +126,7 @@ namespace ms::inventory {
     };
 
     class Payload {
-        TurretIterator w;
+        TurretIterator iterator;
     };
 }
 
