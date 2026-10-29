@@ -11,7 +11,11 @@
 #include <SFML/Graphics/Sprite.hpp>
 
 #include "ECS/ECS.h"
-#include "Spell.h"
+
+
+namespace ms::inventory {
+
+}
 
 namespace ms::inventory {
     struct TurretStats {
@@ -29,6 +33,10 @@ namespace ms::inventory {
     enum class TurretTargetMode {
         Automatic,
         Manual
+    };
+
+    class TurretIterator {
+
     };
 
     class Turret {

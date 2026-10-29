@@ -67,36 +67,6 @@ namespace ms::scene_logic::scenes {
         world->registerSystem<systems::DrawingSystem>(game.getMainWindow());
 
         inventory.bindECS(world->getECS());
-
-        const auto& fireProjectile = game.getAssetManager().spriteMap.at("Fire-projectile");
-        const auto& frostProjectile = game.getAssetManager().spriteMap.at("Frost-projectile");
-        sf::Sprite fireIcon = fireProjectile.sprite;
-        sf::Sprite frostIcon = frostProjectile.sprite;
-        inventory::ProjectileStats fireStats;
-        fireStats.damage = {{components::DamageType::Projectile, 1.5f}};
-        inventory.storeSpell(inventory::Spell(
-            "Fire", inventory::ProjectileSpell{std::move(fireStats)}, std::move(fireIcon),
-            fireProjectile,
-            sf::Color(255, 120, 45)));
-        inventory::ProjectileStats frostStats;
-        frostStats.speed = 10;
-        inventory.storeSpell(inventory::Spell(
-            "Frost", inventory::ProjectileSpell{std::move(frostStats)}, std::move(frostIcon),
-            frostProjectile,
-            sf::Color(100, 190, 255)));
-
-        const auto& turretTexture = game.getAssetManager().textureMap.at("JetFighter-Var3-Spritesheet");
-        sf::Sprite turretIcon(turretTexture);
-        turretIcon.setTextureRect(sf::IntRect({0, 0}, {32, 32}));
-        sf::Sprite turretIcon2(turretTexture);
-        turretIcon2.setTextureRect(sf::IntRect({0, 0}, {32, 32}));
-        inventory::Turret pulseTurret(
-            "Pulse Turret", std::move(turretIcon), 5);
-        inventory::Turret pulseTurret2(
-            "Pulse Turret", std::move(turretIcon2), 2);
-        inventory.storeTurret(std::move(pulseTurret));
-        inventory.storeTurret(std::move(pulseTurret2));
-
         ui.root = std::make_unique<ui::UINode>();
         inventory.buildUI(*ui.root);
     }
