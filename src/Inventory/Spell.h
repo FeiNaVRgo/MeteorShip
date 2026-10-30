@@ -30,7 +30,7 @@ namespace ms::inventory {
         Holy,
         Bite,
         None,
-        AMOUNT
+        MAX
     };
 
     struct ProjectileStats {
@@ -111,9 +111,14 @@ namespace ms::inventory {
 
 
 
+    class SpellFactory {
+
+    };
+
     class Spell {
         std::string name;
         std::optional<sf::Sprite> icon;
+        ProjectileType type;
     public:
         explicit Spell(
             std::string name,
@@ -126,7 +131,14 @@ namespace ms::inventory {
     };
 
     class Payload {
-        TurretIterator iterator;
+        //Turret::TurretIterator iterator; //hihi i could name it tit
+        Turret* turret;
+        //every type of spells tells payload how much it can move TurretIterator
+
+        //how do i hold all stuf here
+
+        int getAmountToMoveForward(ProjectileType& type);
+        void shoot();
     };
 }
 
