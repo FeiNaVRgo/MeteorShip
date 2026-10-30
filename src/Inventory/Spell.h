@@ -126,6 +126,7 @@ namespace ms::inventory {
             : name(std::move(name)),
               icon(std::move(icon)) {}
 
+        ProjectileType& getProjectileType() { return type; }
         const std::string& getName() const { return name; }
         const sf::Sprite* getIcon() const { return icon ? &*icon : nullptr; }
     };
@@ -133,12 +134,42 @@ namespace ms::inventory {
     class Payload {
         //Turret::TurretIterator iterator; //hihi i could name it tit
         Turret* turret;
+        ecs::ECS* ecs;
         //every type of spells tells payload how much it can move TurretIterator
 
         //how do i hold all stuf here
 
+        struct PayloadedSpells {
+            SpellFormation formation;
+            std::vector<Spell> spellsToShot;
+            std::vector<ModifierSpellFunc> modifiers; // those can on bullet creation or constant
+            std::vector<UtilitySpellFunc> utility; // same as modifiers, can be also a normal shootable spell idk
+        };
+        //there is some template magic that i am missing ong
+
+        //maybe applying spell traits with templates?
+        //then having a SpellBase that can pull all those traits
+        std::vector<PayloadedSpells> toShoot;
+
+
         int getAmountToMoveForward(ProjectileType& type);
-        void shoot();
+
+    public:
+        Payload(Turret* turret, ecs::ECS* ecs)
+            : turret(turret), ecs(ecs) {}
+
+        void gatherPayloadedSpells() {
+            int howFarToMove = 0;
+            for (const unsigned int ent_spell : *turret) {
+                auto& spell = ecs->getComponent<Spell>(ent_spell);
+                howFarToMove += getAmountToMoveForward(spell.getProjectileType());
+                //how the fuck am i supposed to do this ong
+
+                if (howFarToMove == 0) {
+                    break;
+                }
+            }
+        }
     };
 }
 
