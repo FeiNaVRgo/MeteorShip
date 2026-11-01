@@ -56,7 +56,8 @@ namespace ms::inventory {
     void Turret::shoot(ecs::ECS& entityManager, const ecs::Entity owner,
                        const sf::Vector2f origin, const float aimAngleRadians) {
         //TODO
-        Payload payload;
+        Payload payload(this, &entityManager);
+        payload.gatherPayloadedSpells();
     }
 
     std::optional<ecs::Entity> Turret::spellEntityAt(const std::size_t index) const {

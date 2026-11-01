@@ -93,6 +93,7 @@ namespace ms::inventory {
 
     };
     class Multicast : public ProjectileBase {
+    public:
         std::optional<SpellFormation> formation;
         int draw{};
 
@@ -145,25 +146,58 @@ namespace ms::inventory {
             std::vector<ModifierSpellFunc> modifiers; // those can on bullet creation or constant
             std::vector<UtilitySpellFunc> utility; // same as modifiers, can be also a normal shootable spell idk
         };
+
+        struct PayloadNode {
+            Spell spell;
+            std::vector<std::unique_ptr<PayloadNode>> children;
+        };
         //there is some template magic that i am missing ong
 
         //maybe applying spell traits with templates?
         //then having a SpellBase that can pull all those traits
         std::vector<PayloadedSpells> toShoot;
+        std::unique_ptr<PayloadNode> rootNode;
 
 
-        int getAmountToMoveForward(ProjectileType& type);
+        int getAmountToMoveForward(ProjectileType const& type) {
+            if (const auto* multicast = std::get_if<Multicast>(&type)) {
+                return multicast->draw;
+            }
+
+            if (std::holds_alternative<Utility>(type) ||
+                std::holds_alternative<ProjectileModifier>(type)) {
+                return 1;
+            }
+
+            return 0;
+        }
+
+        void pushToTree(Spell const& spell) {
+
+        }
+
+        void flattenTree() {
+
+        }
 
     public:
+        //i think i should do the think in the constructor
         Payload(Turret* turret, ecs::ECS* ecs)
             : turret(turret), ecs(ecs) {}
 
+        //im gonna represent a payload as a tree
+        //then flatten it to the toShoot thingy
+
         void gatherPayloadedSpells() {
             int howFarToMove = 0;
-            for (const unsigned int ent_spell : *turret) {
+            for (const auto ent_spell : *turret) {
                 auto& spell = ecs->getComponent<Spell>(ent_spell);
                 howFarToMove += getAmountToMoveForward(spell.getProjectileType());
                 //how the fuck am i supposed to do this ong
+                pushToTree(spell);
+
+                //hmm how to do spell wrapping
+
 
                 if (howFarToMove == 0) {
                     break;
