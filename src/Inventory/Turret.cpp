@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <utility>
 
-#include "Spell.h"
 #include "Components/Drawable.h"
 #include "Components/Projectile.h"
 #include "Components/Rigidbody.h"
@@ -56,20 +55,8 @@ namespace ms::inventory {
     void Turret::shoot(ecs::ECS& entityManager, const ecs::Entity owner,
                        const sf::Vector2f origin, const float aimAngleRadians) {
         //TODO
-        Payload payload(this, &entityManager);
-        payload.gatherPayloadedSpells();
-    }
-
-    std::optional<ecs::Entity> Turret::spellEntityAt(const std::size_t index) const {
-        if (index >= spellOrder.size()) return std::nullopt;
-        return spellOrder[index];
-    }
-
-    bool Turret::setSpellEntity(const std::size_t index, const ecs::Entity spell) {
-        if (index >= spellOrder.size()) return false;
-        spellOrder[index] = spell;
-        resetDeck();
-        return true;
+        Payload payload(this);
+        auto vec_payloads = payload.gatherPayloadedSpells();
     }
 
     std::size_t Turret::addSpellSlot() {

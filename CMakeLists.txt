@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 4.0.2)
 project(MeteorShip)
 
-set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -12,6 +12,8 @@ add_executable(${PROJECT_NAME} "${CMAKE_CURRENT_LIST_DIR}/main.cpp" ${PROJECT_IN
 
 target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
+# Match BehaviorTree.CPP's expected-lite ABI when its headers are used with C++23.
+target_compile_definitions(${PROJECT_NAME} PRIVATE nsel_CONFIG_SELECT_EXPECTED=1)
 
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Python3::Python)

@@ -12,7 +12,7 @@
 #include <SFML/Graphics/Sprite.hpp>
 
 #include "ECS/ECS.h"
-
+#include "Spell.h"
 
 namespace ms::inventory {
 
@@ -38,7 +38,7 @@ namespace ms::inventory {
 
 
     class Turret {
-        using SpellsOrder = std::vector<std::optional<ecs::Entity>>;
+        using SpellsOrder = std::vector<std::optional<Spell>>;
         using DeckOrder   = std::vector<std::size_t>;
 
         std::string name;
@@ -68,10 +68,10 @@ namespace ms::inventory {
 
         public:
             using iterator_category = std::forward_iterator_tag;
-            using value_type = ecs::Entity;
+            using value_type = Spell;
             using difference_type = std::ptrdiff_t;
-            using reference = ecs::Entity&;
-            using pointer = ecs::Entity*;
+            using reference = Spell&;
+            using pointer = Spell*;
 
             TurretIterator() = default;
 
@@ -114,8 +114,6 @@ namespace ms::inventory {
         void shoot(ecs::ECS& entityManager, ecs::Entity owner, sf::Vector2f origin,
                    float aimAngleRadians);
         void resetDeck();
-        std::optional<ecs::Entity> spellEntityAt(std::size_t index) const;
-        bool setSpellEntity(std::size_t index, ecs::Entity spell);
         std::size_t addSpellSlot();
         bool removeSpellSlot(std::size_t index);
         bool resizeSpellSlots(std::size_t count);

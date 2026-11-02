@@ -2,14 +2,18 @@
 #define METEORSHIP_SPELL_H
 
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
+#include <vector>
+
 #include <SFML/Graphics/Sprite.hpp>
 
-#include "Turret.h"
-
 namespace ms::inventory {
+    class Turret;
+
     using ModifierSpellFunc = std::function<void()>;
     using UtilitySpellFunc = std::function<void()>;
 
@@ -133,9 +137,7 @@ namespace ms::inventory {
     };
 
     class Payload {
-        //Turret::TurretIterator iterator; //hihi i could name it tit
         Turret* turret;
-        ecs::ECS* ecs;
         //every type of spells tells payload how much it can move TurretIterator
 
         //how do i hold all stuf here
@@ -145,6 +147,8 @@ namespace ms::inventory {
             std::vector<Spell> spellsToShot;
             std::vector<ModifierSpellFunc> modifiers; // those can on bullet creation or constant
             std::vector<UtilitySpellFunc> utility; // same as modifiers, can be also a normal shootable spell idk
+
+            //how to turn it into shootable spell hmm qwp
         };
 
         struct PayloadNode {
@@ -155,7 +159,7 @@ namespace ms::inventory {
 
         //maybe applying spell traits with templates?
         //then having a SpellBase that can pull all those traits
-        std::vector<PayloadedSpells> toShoot;
+        std::vector<PayloadedSpells> toShoot; // should we make a wrapper around it so we can easly get mana cost and such?
         std::unique_ptr<PayloadNode> rootNode;
 
 
@@ -172,7 +176,7 @@ namespace ms::inventory {
             return 0;
         }
 
-        void pushToTree(Spell const& spell) {
+         void pushToTree(Spell const& spell) {
 
         }
 
@@ -182,28 +186,13 @@ namespace ms::inventory {
 
     public:
         //i think i should do the think in the constructor
-        Payload(Turret* turret, ecs::ECS* ecs)
-            : turret(turret), ecs(ecs) {}
+        explicit Payload(Turret* turret)
+            : turret(turret) {}
 
         //im gonna represent a payload as a tree
         //then flatten it to the toShoot thingy
 
-        void gatherPayloadedSpells() {
-            int howFarToMove = 0;
-            for (const auto ent_spell : *turret) {
-                auto& spell = ecs->getComponent<Spell>(ent_spell);
-                howFarToMove += getAmountToMoveForward(spell.getProjectileType());
-                //how the fuck am i supposed to do this ong
-                pushToTree(spell);
-
-                //hmm how to do spell wrapping
-
-
-                if (howFarToMove == 0) {
-                    break;
-                }
-            }
-        }
+        std::vector<PayloadedSpells>& gatherPayloadedSpells();
     };
 }
 

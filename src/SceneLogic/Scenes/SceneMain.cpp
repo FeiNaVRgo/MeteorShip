@@ -66,9 +66,15 @@ namespace ms::scene_logic::scenes {
             inventory, game.getMainWindow(), world->getQuadtree());
         world->registerSystem<systems::DrawingSystem>(game.getMainWindow());
 
-        inventory.bindECS(world->getECS());
         ui.root = std::make_unique<ui::UINode>();
+
         inventory.buildUI(*ui.root);
+        //for testing ig
+        inventory.storeTurret(inventory::Turret{
+            "lmao",
+            this->game.getAssetManager().spriteMap.at("JetFighter-Var3-Spritesheet").sprite,
+            3
+        });
     }
 
     void SceneMain::init() {
@@ -103,8 +109,6 @@ namespace ms::scene_logic::scenes {
         components::Drawable drawable{};
         drawable.sprite = game.getAssetManager().spriteMap.at("JetFighter-Var3-Spritesheet");
         world->getECS().addComponent<components::Drawable>(player, drawable);
-        inventory.bindPlayerEntity(player);
-
         components::Rigidbody rigidbody{};
         auto rect = drawable.sprite.value().sprite.getLocalBounds();
         rigidbody.bounds = utility::centeredRect(transform.getPosition(), rect.size);
