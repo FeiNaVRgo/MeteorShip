@@ -41,7 +41,7 @@ namespace ms::inventory {
         template<typename T>
         using opt = std::optional<T>;
 
-        //rethink in future if we want opt or like default vals idk
+        //rethink in future if we want to opt or like default vals idk
 
         opt<int> uses;
         opt<float> manaDrain;
@@ -159,7 +159,7 @@ namespace ms::inventory {
 
         //maybe applying spell traits with templates?
         //then having a SpellBase that can pull all those traits
-        std::vector<PayloadedSpells> toShoot; // should we make a wrapper around it so we can easly get mana cost and such?
+        std::vector<PayloadedSpells> toShoot; // should we make a wrapper around it so we can easily get mana cost and such?
         std::unique_ptr<PayloadNode> rootNode;
 
 
@@ -176,7 +176,11 @@ namespace ms::inventory {
             return 0;
         }
 
-         void pushToTree(Spell const& spell) {
+         void pushToTree(Spell& spell) {
+            auto& type = spell.getProjectileType();
+            //pushProjectile
+            //pushModifier
+            //pushMulticast
 
         }
 
