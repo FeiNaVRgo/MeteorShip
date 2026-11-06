@@ -26,6 +26,7 @@
       "name": "glad",
       "version>=": "0.1.36"
     },
+    "opencl",
     {
       "name": "behaviortree-cpp",
       "version>=": "4.10.0"

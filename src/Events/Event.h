@@ -15,7 +15,12 @@ namespace ms {
             ecs::Entity entity;
         };
 
-        using events_t = std::variant<RemoveEntity>;
+        struct CollisionDetected {
+            ecs::Entity first;
+            ecs::Entity second;
+        };
+
+        using events_t = std::variant<RemoveEntity, CollisionDetected>;
         events_t event_data;
 
         template<typename TEventSubVariant> //I probably should check if the data type is in variant

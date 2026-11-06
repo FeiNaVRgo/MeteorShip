@@ -134,6 +134,12 @@ namespace ms::systems {
             return query(bounds, root.get());
         }
 
+        [[nodiscard]] std::vector<ecs::Entity> queryPotential(const sf::FloatRect& bounds) const {
+            std::vector<ecs::Entity> result;
+            queryPotential(bounds, root.get(), result);
+            return result;
+        }
+
         [[nodiscard]] std::vector<ecs::Entity> queryAll() const {
             std::vector<ecs::Entity> result;
             queryAll(root.get(), result);
@@ -272,6 +278,24 @@ namespace ms::systems {
             }
 
             return entities;
+        }
+
+        static void queryPotential(const sf::FloatRect& bounds, Node const* node,
+                                   std::vector<ecs::Entity>& result) {
+            if (!node->bounds.findIntersection(bounds).has_value()) {
+                return;
+            }
+
+            if (node->isLeaf()) {
+                if (node->entities.has_value()) {
+                    result.insert(result.end(), node->entities->begin(), node->entities->end());
+                }
+                return;
+            }
+
+            for (const auto& child : node->children) {
+                queryPotential(bounds, child.get(), result);
+            }
         }
 
         static void queryAll(Node const* node, std::vector<ecs::Entity>& result) {

@@ -19,6 +19,7 @@ namespace ms::scene_logic::scenes {
 
     public:
         boost::signals2::connection removeEntityConn;
+        boost::signals2::connection collisionDetectedConn;
 
         explicit SceneMain(Game& game, std::string name);
 
@@ -29,6 +30,9 @@ namespace ms::scene_logic::scenes {
         void createPlayer();
 
         void createEnemy();
+
+    private:
+        void handleCollisionDetected(const Event::CollisionDetected& event);
     };
 }
 

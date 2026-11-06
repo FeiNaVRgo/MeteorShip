@@ -14,9 +14,12 @@
 #include "BTNodes/BTreeCreation.h"
 #include "Components/Enemy.h"
 #include "Components/Projectile.h"
+#include "Components/Rigidbody.h"
+#include "Components/Transform.h"
 #include "Components/TurretMountLayout.h"
 #include "Events/EventSignalFactory.h"
 #include "Systems/Behavior/BehaviorSystem.h"
+#include "Systems/Physics/CollisionSystem.h"
 #include "Systems/Physics/MovementSystem.h"
 #include "Systems/Player/PlayerSystem.h"
 #include "Systems/Player/TurretSystem.h"
@@ -62,6 +65,8 @@ namespace ms::scene_logic::scenes {
         world->registerSystem<systems::MovementSystem>();
         world->registerSystem<systems::BehaviorSystem>();
         world->registerSystem<systems::SpatialHash>(world->getQuadtree(), world->getEventDispatcher());
+        world->registerSystem<systems::CollisionSystem>(
+            world->getQuadtree(), world->getEventDispatcher());
         world->registerSystem<systems::TurretSystem>(
             inventory, game.getMainWindow(), world->getQuadtree());
         world->registerSystem<systems::DrawingSystem>(game.getMainWindow());
@@ -81,6 +86,10 @@ namespace ms::scene_logic::scenes {
         removeEntityConn = utility::EventSignalFactory::createEventSignal<Event::RemoveEntity>(
             game.getEventHandler(),
             [this](Event::RemoveEntity const& e) { world->getECS().destroyEntity(e.entity); });
+        collisionDetectedConn =
+            utility::EventSignalFactory::createEventSignal<Event::CollisionDetected>(
+                game.getEventHandler(),
+                [this](const Event::CollisionDetected& event) { handleCollisionDetected(event); });
 
         createPlayer();
         createEnemy();
@@ -88,6 +97,61 @@ namespace ms::scene_logic::scenes {
 
     void SceneMain::destroy() {
         removeEntityConn.disconnect();
+        collisionDetectedConn.disconnect();
+    }
+
+    void SceneMain::handleCollisionDetected(const Event::CollisionDetected& event) {
+        auto& ecs = world->getECS();
+        const auto first = event.first;
+        const auto second = event.second;
+        if (!ecs.isEntityAlive(first) || !ecs.isEntityAlive(second) ||
+            !ecs.hasComponent<components::Rigidbody>(first) ||
+            !ecs.hasComponent<components::Rigidbody>(second) ||
+            !ecs.hasComponent<components::Transform>(first) ||
+            !ecs.hasComponent<components::Transform>(second)) {
+            return;
+        }
+
+        auto& firstBody = ecs.getComponent<components::Rigidbody>(first);
+        auto& secondBody = ecs.getComponent<components::Rigidbody>(second);
+        const auto overlap = firstBody.bounds.findIntersection(secondBody.bounds);
+        if (!overlap) {
+            return;
+        }
+
+        sf::Vector2f firstCorrection{};
+        if (overlap->size.x < overlap->size.y) {
+            const float firstCenter = firstBody.bounds.position.x + firstBody.bounds.size.x / 2.f;
+            const float secondCenter = secondBody.bounds.position.x + secondBody.bounds.size.x / 2.f;
+            const float direction = firstCenter == secondCenter
+                                        ? (first < second ? -1.f : 1.f)
+                                        : (firstCenter < secondCenter ? -1.f : 1.f);
+            firstCorrection.x = direction * overlap->size.x / 2.f;
+        } else {
+            const float firstCenter = firstBody.bounds.position.y + firstBody.bounds.size.y / 2.f;
+            const float secondCenter = secondBody.bounds.position.y + secondBody.bounds.size.y / 2.f;
+            const float direction = firstCenter == secondCenter
+                                        ? (first < second ? -1.f : 1.f)
+                                        : (firstCenter < secondCenter ? -1.f : 1.f);
+            firstCorrection.y = direction * overlap->size.y / 2.f;
+        }
+
+        const sf::Vector2f secondCorrection = -firstCorrection;
+        ecs.getComponent<components::Transform>(first).move(firstCorrection);
+        ecs.getComponent<components::Transform>(second).move(secondCorrection);
+        firstBody.bounds.position += firstCorrection;
+        secondBody.bounds.position += secondCorrection;
+
+        const auto removeNormalVelocity = [](components::Rigidbody& body, sf::Vector2f correction) {
+            if (correction.x != 0.f) {
+                body.velocity.x = 0.f;
+            } else {
+                body.velocity.y = 0.f;
+            }
+        };
+        removeNormalVelocity(firstBody, firstCorrection);
+        removeNormalVelocity(secondBody, secondCorrection);
+
     }
 
     void SceneMain::update(float elapsedTime) {
