@@ -66,7 +66,7 @@ namespace ms::scene_logic::scenes {
         world->registerSystem<systems::BehaviorSystem>();
         world->registerSystem<systems::SpatialHash>(world->getQuadtree(), world->getEventDispatcher());
         world->registerSystem<systems::CollisionSystem>(
-            world->getQuadtree(), world->getEventDispatcher());
+            world->getQuadtree(), world->getEventDispatcher(), game.getCollisionDetector());
         world->registerSystem<systems::TurretSystem>(
             inventory, game.getMainWindow(), world->getQuadtree());
         world->registerSystem<systems::DrawingSystem>(game.getMainWindow());

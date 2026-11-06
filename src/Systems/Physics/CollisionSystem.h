@@ -10,23 +10,19 @@
 #include "Systems/SpatialHashing/Quadtree.h"
 
 namespace ms::systems {
-    class CollisionSystem : public ecs::System {
-        class OpenCLBackend;
+    class OpenCLCollisionDetector;
 
+    class CollisionSystem : public ecs::System {
         Quadtree &quadtree;
         EventDispatcher &eventDispatcher;
-        std::unique_ptr<OpenCLBackend> gpuBackend;
+        OpenCLCollisionDetector &collisionDetector;
         std::vector<std::pair<ecs::Entity, ecs::Entity> > collisions;
-        bool gpuFailureReported{};
 
     public:
-        CollisionSystem(Quadtree &quadtree, EventDispatcher &eventDispatcher);
-
-        ~CollisionSystem() override;
+        CollisionSystem(Quadtree &quadtree, EventDispatcher &eventDispatcher,
+                        OpenCLCollisionDetector &collisionDetector);
 
         void update(float deltaTime) override;
-
-        [[nodiscard]] bool isUsingGpu() const { return gpuBackend != nullptr; }
 
         [[nodiscard]] const std::vector<std::pair<ecs::Entity, ecs::Entity> > &
         getCollisions() const { return collisions; }

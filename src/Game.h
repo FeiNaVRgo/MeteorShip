@@ -12,33 +12,38 @@
 #include "Utility/AssetManager.h"
 #include "SceneLogic/SceneManager.h"
 #include "SceneLogic/Scenes/SceneMain.h"
+#include "Systems/Physics/OpenCLCollisionDetector.h"
 
 struct nk_context;
 struct nk_font_atlas;
 
 namespace ms {
     class Game {
-        WorldBox                    worldBox;
-        sf::ContextSettings         settings;
-        sf::RenderWindow            mainWindow;
-        utility::EventHandling      eventHandler;
-        utility::AssetManager       assetManager;
-        scene_logic::SceneManager   sceneManager;
-        nk_context*                 ctx;
-        nk_font_atlas*              atlas;
-        BT::Blackboard::Ptr         globalBlackboard;
-        BT::BehaviorTreeFactory     factory;
+        WorldBox worldBox;
+        sf::ContextSettings settings;
+        sf::RenderWindow mainWindow;
+        utility::EventHandling eventHandler;
+        utility::AssetManager assetManager;
+        scene_logic::SceneManager sceneManager;
+        systems::OpenCLCollisionDetector collisionDetector;
+        nk_context *ctx;
+        nk_font_atlas *atlas;
+        BT::Blackboard::Ptr globalBlackboard;
+        BT::BehaviorTreeFactory factory;
+
     public:
         Game();
 
-        sf::RenderWindow& getMainWindow();
-        utility::AssetManager& getAssetManager() { return assetManager; }
-        utility::EventHandling& getEventHandler() { return eventHandler; }
-        BT::Blackboard::Ptr getGlobalBlackboard() { return globalBlackboard; }
-        scene_logic::SceneManager& getSceneManager() { return sceneManager; }
-        BT::BehaviorTreeFactory& getBehaviorTreeFactory() { return factory; }
+        sf::RenderWindow &getMainWindow();
 
-        void update(sf::Time const& elapsed) const;
+        utility::AssetManager &getAssetManager() { return assetManager; }
+        utility::EventHandling &getEventHandler() { return eventHandler; }
+        BT::Blackboard::Ptr getGlobalBlackboard() { return globalBlackboard; }
+        scene_logic::SceneManager &getSceneManager() { return sceneManager; }
+        systems::OpenCLCollisionDetector &getCollisionDetector() { return collisionDetector; }
+        BT::BehaviorTreeFactory &getBehaviorTreeFactory() { return factory; }
+
+        void update(sf::Time const &elapsed) const;
 
         void handleEvents();
 

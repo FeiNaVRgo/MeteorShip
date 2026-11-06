@@ -17,7 +17,7 @@
 #include "ECS/ECS.h"
 
 namespace ms::systems {
-    static inline constexpr uint8_t MAX_ENTITIES_IN_NODE = 1;
+    static inline constexpr uint8_t MAX_ENTITIES_IN_NODE = 8;
     static inline constexpr uint8_t MAX_QUADTREE_DEPTH = 4;
 
     enum class ENodesChildren : uint8_t {

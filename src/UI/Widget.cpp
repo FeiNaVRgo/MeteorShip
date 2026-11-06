@@ -4,6 +4,7 @@
 
 #include "Widget.h"
 
+#include <algorithm>
 #include <SFML/Graphics/Texture.hpp>
 
 void ms::ui::WidgetDrawer::handleClick(
@@ -74,3 +75,22 @@ void ms::ui::WidgetDrawer::operator()(widgets::SliderWidget &w) const { nk_slide
 void ms::ui::WidgetDrawer::operator()(widgets::CheckboxWidget &w) const { nk_checkbox_label(ctx, w.text.c_str(), &w.checked); }
 
 void ms::ui::WidgetDrawer::operator()(widgets::PropertyWidget &w) const { nk_property_int(ctx, w.name.c_str(), w.min, &w.value, w.max, w.step, 1.0f); }
+
+void ms::ui::WidgetDrawer::operator()(widgets::DropdownWidget &w) const {
+    if (w.options.empty()) return;
+
+    std::vector<const char*> options;
+    options.reserve(w.options.size());
+    for (const auto& option : w.options) {
+        options.push_back(option.c_str());
+    }
+
+    const int previousSelection = w.selected;
+    w.selected = std::clamp(
+        nk_combo(ctx, options.data(), static_cast<int>(options.size()), w.selected,
+                 w.itemHeight, nk_vec2(360.f, 240.f)),
+        0, static_cast<int>(options.size()) - 1);
+    if (w.selected != previousSelection && w.onSelectionChanged) {
+        w.onSelectionChanged(w.selected);
+    }
+}

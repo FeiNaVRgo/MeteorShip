@@ -9,6 +9,7 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 #include <SFML/Graphics/Sprite.hpp>
 #include "nuklear_config.h"
 
@@ -50,6 +51,13 @@ namespace ms::ui {
             std::string name;
             int min = 0, max = 100, value = 0, step = 1;
         };
+
+        struct DropdownWidget {
+            std::vector<std::string> options;
+            int selected{};
+            std::function<void(int)> onSelectionChanged;
+            int itemHeight = 24;
+        };
     }
 
     using Widget = std::variant<
@@ -58,7 +66,8 @@ namespace ms::ui {
         widgets::InventorySlotWidget,
         widgets::SliderWidget,
         widgets::CheckboxWidget,
-        widgets::PropertyWidget
+        widgets::PropertyWidget,
+        widgets::DropdownWidget
     >;
 
     class UIInputState {
@@ -93,6 +102,8 @@ namespace ms::ui {
         void operator()(widgets::CheckboxWidget& w) const;
 
         void operator()(widgets::PropertyWidget& w) const;
+
+        void operator()(widgets::DropdownWidget& w) const;
     };
 }
 
