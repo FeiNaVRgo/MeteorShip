@@ -76,7 +76,7 @@ namespace ms::scene_logic::scenes {
         inventory.buildUI(*ui.root);
         //for testing ig
         inventory.storeTurret(inventory::Turret{
-            "lmao",
+            "turret numero jeden",
             this->game.getAssetManager().spriteMap.at("JetFighter-Var3-Spritesheet").sprite,
             3
         });

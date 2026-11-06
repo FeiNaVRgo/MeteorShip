@@ -6,8 +6,8 @@
 #include "Game.h"
 
 
-void ms::utility::EventHandling::Visitor::handle(sf::Event::Closed const& event) {
-    game.getMainWindow().close();
+void ms::utility::EventHandling::Visitor::handle(sf::Event::Closed const&) {
+    game.requestClose();
 }
 void ms::utility::EventHandling::Visitor::handle(sf::Event::Resized const &event) {}
 void ms::utility::EventHandling::Visitor::handle(sf::Event::FocusLost const &event) {}

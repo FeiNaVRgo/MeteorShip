@@ -9,6 +9,7 @@
 #include <iterator>
 #include <limits>
 #include <stdexcept>
+#include <tuple>
 #include <utility>
 
 namespace ms::systems {
@@ -214,7 +215,6 @@ namespace ms::systems {
 
         std::vector<Device> devices;
         std::unique_ptr<Backend> backend;
-        int failedOption{-1};
 
         Impl() {
             try {
@@ -265,61 +265,60 @@ namespace ms::systems {
         }
 
         [[nodiscard]] size_t getBestDevice() const {
-            size_t best = 0;
-            for (size_t i = 1; i < devices.size(); ++i) {
-                const auto &candidate = devices[i];
-                const auto &current = devices[best];
-                if (candidate.unifiedMemory != current.unifiedMemory) {
-                    if (!candidate.unifiedMemory) {
-                        best = i;
-                    }
-                    continue;
-                }
-                if (candidate.globalMemory != current.globalMemory) {
-                    if (candidate.globalMemory > current.globalMemory) {
-                        best = i;
-                    }
-                    continue;
-                }
-                if (candidate.computeUnits != current.computeUnits) {
-                    if (candidate.computeUnits > current.computeUnits) {
-                        best = i;
-                    }
-                    continue;
-                }
-                if (candidate.clockFrequency > current.clockFrequency) {
-                    best = i;
-                }
-            }
-            return best;
+            const auto performance = [](const Device& device) {
+                return std::tuple{
+                    device.unifiedMemory == CL_FALSE,
+                    device.globalMemory,
+                    device.computeUnits,
+                    device.clockFrequency
+                };
+            };
+            return static_cast<size_t>(std::distance(
+                devices.begin(),
+                std::max_element(devices.begin(), devices.end(),
+                    [&](const Device& a, const Device& b) {
+                        return performance(a) < performance(b);
+                    })));
         }
 
-        std::optional<std::vector<std::uint8_t> > detect(
-            int option, const std::vector<std::array<float, 4> > &boxes, size_t pairCount) {
-            if (option == 1 || devices.empty() || failedOption == option) {
-                return std::nullopt;
+        void selectDevice(int option) {
+            backend.reset();
+            if (option == 1 || devices.empty()) {
+                return;
             }
 
             const size_t deviceIndex = option == 0
                                            ? getBestDevice()
                                            : static_cast<size_t>(option - 2);
             if (deviceIndex >= devices.size()) {
+                return;
+            }
+
+            try {
+                backend = std::make_unique<Backend>(devices[deviceIndex]);
+                std::clog << "OpenCL collision detection using "
+                          << devices[deviceIndex].vendor << " "
+                          << devices[deviceIndex].name << '\n';
+            } catch (const std::exception &error) {
+                backend.reset();
+                std::cerr << "Unable to initialize selected OpenCL device; "
+                             "using CPU collision detection: "
+                        << error.what() << '\n';
+            }
+        }
+
+        std::optional<std::vector<std::uint8_t>> detect(
+            const std::vector<std::array<float, 4>>& boxes, size_t pairCount) {
+            if (!backend) {
                 return std::nullopt;
             }
 
             try {
-                if (!backend) {
-                    backend = std::make_unique<Backend>(devices[deviceIndex]);
-                    std::clog << "OpenCL collision detection using "
-                            << devices[deviceIndex].vendor << " "
-                            << devices[deviceIndex].name << '\n';
-                }
                 return backend->detect(boxes, pairCount);
-            } catch (const std::exception &error) {
+            } catch (const std::exception& error) {
                 backend.reset();
-                failedOption = option;
-                std::cerr << "OpenCL collision detection failed; using CPU fallback: "
-                        << error.what() << '\n';
+                std::cerr << "OpenCL collision detection failed; using CPU collision detection: "
+                          << error.what() << '\n';
                 return std::nullopt;
             }
         }
@@ -331,6 +330,7 @@ namespace ms::systems {
         for (const auto &device: impl->devices) {
             options.push_back(device.vendor + " - " + device.name);
         }
+        impl->selectDevice(selectedOption);
     }
 
     OpenCLCollisionDetector::~OpenCLCollisionDetector() = default;
@@ -339,16 +339,15 @@ namespace ms::systems {
         if (option < 0 || static_cast<size_t>(option) >= options.size()) {
             throw std::out_of_range("OpenCL device option is out of range");
         }
-        if (selectedOption == option) {
+        if (selectedOption == option && (option == 1 || impl->backend)) {
             return;
         }
         selectedOption = option;
-        impl->backend.reset();
-        impl->failedOption = -1;
+        impl->selectDevice(selectedOption);
     }
 
     std::optional<std::vector<std::uint8_t> > OpenCLCollisionDetector::detect(
         const std::vector<std::array<float, 4> > &boxes, const std::size_t pairCount) {
-        return impl->detect(selectedOption, boxes, pairCount);
+        return impl->detect(boxes, pairCount);
     }
 }

@@ -73,9 +73,9 @@ namespace ms::systems {
                                        : intersects(boxes[i * 2], boxes[i * 2 + 1]);
             if (collision) {
                 collisions.push_back(candidatePairs[i]);
-                eventDispatcher.push(Event(Event::CollisionDetected{
-                    candidatePairs[i].first, candidatePairs[i].second
-                }));
+                eventDispatcher.push(Event::CollisionDetected{
+                    .first = candidatePairs[i].first, .second = candidatePairs[i].second
+                });
             }
         }
     }

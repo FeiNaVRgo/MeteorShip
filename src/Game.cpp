@@ -21,6 +21,7 @@
 #include <behaviortree_cpp/bt_factory.h>
 #include <behaviortree_cpp/xml_parsing.h>
 #include <pybind11/embed.h>
+#include <string>
 
 #include "BTNodes/IsPlayerVisible.h"
 #include "BTNodes/MoveForward.h"
@@ -121,6 +122,10 @@ namespace ms
 
     void Game::run() {
         sf::Clock clock;
+        sf::Time fpsSampleTime = sf::Time::Zero;
+        unsigned int fpsSampleFrames = 0;
+        unsigned int fps = 0;
+        bool hasFpsSample = false;
 
         nk_colorf bg{};
         bg.r = 0.10f, bg.g = 0.18f, bg.b = 0.24f, bg.a = 1.0f;
@@ -145,10 +150,38 @@ namespace ms
 
         while (mainWindow.isOpen()) {
             sf::Time elapsed = clock.restart();
+            fpsSampleTime += elapsed;
+            ++fpsSampleFrames;
+            if (fpsSampleTime >= sf::seconds(0.5f)) {
+                fps = static_cast<unsigned int>(
+                    static_cast<float>(fpsSampleFrames) / fpsSampleTime.asSeconds());
+                fpsSampleTime = sf::Time::Zero;
+                fpsSampleFrames = 0;
+                hasFpsSample = true;
+            }
 
             handleEvents();
+            if (closeRequested) break;//very not elegant qwp
 
             sceneManager.getCurrentScene()->drawUI(ctx); // render of ui, puts stuff into nuklear buffer that will be drawn later
+            const auto windowSize = mainWindow.getSize();
+            const struct nk_rect fpsBounds{
+                static_cast<float>(windowSize.x) - 100.0f,
+                static_cast<float>(windowSize.y) - 34.0f,
+                92.0f,
+                26.0f
+            };
+            nk_style_push_color(ctx, &ctx->style.window.background, nk_rgba(0, 0, 0, 0));
+            nk_style_push_style_item(ctx, &ctx->style.window.fixed_background,
+                                     nk_style_item_color(nk_rgba(0, 0, 0, 0)));
+            if (nk_begin(ctx, "FPS", fpsBounds, NK_WINDOW_NO_INPUT | NK_WINDOW_NO_SCROLLBAR)) {
+                nk_layout_row_dynamic(ctx, 22.0f, 1);
+                const std::string fpsLabel = hasFpsSample ? "FPS: " + std::to_string(fps) : "FPS: --";
+                nk_label(ctx, fpsLabel.c_str(), NK_TEXT_ALIGN_RIGHT | NK_TEXT_ALIGN_MIDDLE);
+            }
+            nk_end(ctx);
+            nk_style_pop_color(ctx);
+            nk_style_pop_style_item(ctx);
 
             auto isActiveWindow = mainWindow.setActive(true);
             mainWindow.clear(sf::Color(bg.r * 255, bg.g * 255, bg.b * 255, bg.a * 255));
@@ -162,6 +195,8 @@ namespace ms
 
             mainWindow.display();
         }
+        (void)mainWindow.setActive(true);
         nk_sfml_shutdown();
+        mainWindow.close();
     }
 } // ms

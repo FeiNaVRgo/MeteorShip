@@ -30,11 +30,13 @@ namespace ms {
         nk_font_atlas *atlas;
         BT::Blackboard::Ptr globalBlackboard;
         BT::BehaviorTreeFactory factory;
+        bool closeRequested = false;
 
     public:
         Game();
 
         sf::RenderWindow &getMainWindow();
+        void requestClose() { closeRequested = true; }
 
         utility::AssetManager &getAssetManager() { return assetManager; }
         utility::EventHandling &getEventHandler() { return eventHandler; }
