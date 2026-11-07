@@ -14,21 +14,21 @@
 namespace ms::systems {
     class PlayerSystem : public ecs::System {
     public:
-        void update(float) override {
+        void update(float deltaTime) override {
             ecs->view<components::Player, components::Transform>()
-                .each([](ecs::Entity const&,
-                         components::Player&,
-                         components::Transform& transform)
+                .each([deltaTime](ecs::Entity const&,
+                                  components::Player&,
+                                  components::Transform& transform)
                 {
                     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)) {
                         auto const offset = utility::angleToVector(transform.getRotation()).normalized();
-                        transform.move(offset);
+                        transform.move(offset * deltaTime * 50.f);
                     }
                     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)) {
-                        transform.rotate(sf::degrees(-0.5f));
+                        transform.rotate(sf::degrees(-1.f) * deltaTime * 20.f);
                     }
                     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)) {
-                        transform.rotate(sf::degrees(0.5f));
+                        transform.rotate(sf::degrees(1.f) * deltaTime * 20.f);
                     }
                 }
             );

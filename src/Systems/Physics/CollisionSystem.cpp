@@ -55,7 +55,7 @@ namespace ms::systems {
             }
         }
         std::ranges::sort(candidatePairs);
-        candidatePairs.erase(std::unique(candidatePairs.begin(), candidatePairs.end()),
+        candidatePairs.erase(std::ranges::unique(candidatePairs).begin(),
                              candidatePairs.end());
 
         std::vector<Aabb> boxes;

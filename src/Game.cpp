@@ -66,7 +66,7 @@ namespace ms
         }
         globalBlackboard->set("game_ptr", this);
 
-        mainWindow.setFramerateLimit(60);
+        //mainWindow.setFramerateLimit(60);
         mainWindow.setVerticalSyncEnabled(true);
         auto b = mainWindow.setActive(true);
 

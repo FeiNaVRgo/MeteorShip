@@ -186,7 +186,7 @@ namespace ms::systems {
                                      queue, boxesBuffer, CL_TRUE, 0, pairCount * 2 * sizeof(boxes[0]),
                                      boxes.data(), 0, nullptr, nullptr), "clEnqueueWriteBuffer");
 
-                const cl_uint count = static_cast<cl_uint>(pairCount);
+                const auto count = static_cast<cl_uint>(pairCount);
                 checkOpenCLError(clSetKernelArg(kernel, 0, sizeof(boxesBuffer), &boxesBuffer),
                                  "clSetKernelArg(boxes)");
                 checkOpenCLError(clSetKernelArg(kernel, 1, sizeof(overlapsBuffer), &overlapsBuffer),
@@ -275,10 +275,10 @@ namespace ms::systems {
             };
             return static_cast<size_t>(std::distance(
                 devices.begin(),
-                std::max_element(devices.begin(), devices.end(),
-                    [&](const Device& a, const Device& b) {
-                        return performance(a) < performance(b);
-                    })));
+                std::ranges::max_element(devices,
+                                         [&](const Device& a, const Device& b) {
+                                             return performance(a) < performance(b);
+                                         })));
         }
 
         void selectDevice(int option) {
