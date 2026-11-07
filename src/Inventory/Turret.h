@@ -97,6 +97,7 @@ namespace ms::inventory {
 
         TurretIterator begin() { return {&spellOrder, &deckOrder, 0}; }
         TurretIterator end() { return {&spellOrder, &deckOrder, deckOrder.size()}; }
+        TurretIterator current() { return {&spellOrder, &deckOrder, deckCursor}; }
 
         const std::string& getName() const { return name; }
         const sf::Sprite* getIcon() const { return icon ? &*icon : nullptr; }
@@ -104,6 +105,9 @@ namespace ms::inventory {
         std::size_t capacity() const { return stats.capacity; }
         const TurretStats& getStats() const { return stats; }
         float getMana() const { return mana; }
+        std::size_t getDeckCursor() const { return deckCursor; }
+        float getCastDelayRemaining() const { return castDelayRemaining; }
+        float getRechargeRemaining() const { return rechargeRemaining; }
         TurretTargetMode getTargetMode() const { return targetMode; }
         void setTargetMode(TurretTargetMode mode) { targetMode = mode; }
         TurretTargetMode toggleTargetMode();
@@ -120,6 +124,7 @@ namespace ms::inventory {
 
     private:
         friend class Inventory;
+        friend class Payload;
     };
 }
 

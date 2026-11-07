@@ -21,6 +21,7 @@
 #include "Systems/Behavior/BehaviorSystem.h"
 #include "Systems/Physics/CollisionSystem.h"
 #include "Systems/Physics/MovementSystem.h"
+#include "Systems/Projectiles/ProjectileSystem.h"
 #include "Systems/Player/PlayerSystem.h"
 #include "Systems/Player/TurretSystem.h"
 #include "Systems/SpatialHashing/SpatialHash.h"
@@ -62,6 +63,7 @@ namespace ms::scene_logic::scenes {
 
     SceneMain::SceneMain(Game& game, std::string name) : SceneBase(game, std::move(name)) {
         world->registerSystem<systems::PlayerSystem>();
+        world->registerSystem<systems::ProjectileSystem>();
         world->registerSystem<systems::MovementSystem>();
         world->registerSystem<systems::BehaviorSystem>();
         world->registerSystem<systems::SpatialHash>(world->getQuadtree(), world->getEventDispatcher());
@@ -78,8 +80,26 @@ namespace ms::scene_logic::scenes {
         inventory.storeTurret(inventory::Turret{
             "turret numero jeden",
             this->game.getAssetManager().spriteMap.at("JetFighter-Var3-Spritesheet").sprite,
-            3
+            7
         });
+
+        auto& assetMgr = this->game.getAssetManager();
+        std::optional<utility::AnimatedSprite> bulletSprite;
+        std::optional<sf::Sprite> bulletIcon;
+        auto bulletIt = assetMgr.spriteMap.find("Fire-projectile");
+        if (bulletIt != assetMgr.spriteMap.end()) {
+            bulletSprite = bulletIt->second;
+            bulletIcon = bulletIt->second.sprite;
+        }
+
+        auto deck = inventory::SpellFactory::makeExampleDeck();
+        for (auto& spell : deck) {
+            if (spell.isProjectile() && bulletSprite.has_value()) {
+                spell.setProjectileSprite(*bulletSprite);
+                spell.setIcon(*bulletIcon);
+            }
+            inventory.storeSpell(std::move(spell));
+        }
     }
 
     void SceneMain::init() {
@@ -108,7 +128,9 @@ namespace ms::scene_logic::scenes {
             !ecs.hasComponent<components::Rigidbody>(first) ||
             !ecs.hasComponent<components::Rigidbody>(second) ||
             !ecs.hasComponent<components::Transform>(first) ||
-            !ecs.hasComponent<components::Transform>(second)) {
+            !ecs.hasComponent<components::Transform>(second) ||
+            ecs.hasComponent<components::Projectile>(first) ||
+            ecs.hasComponent<components::Projectile>(second)) {
             return;
         }
 

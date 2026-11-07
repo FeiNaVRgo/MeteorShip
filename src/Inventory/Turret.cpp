@@ -1,17 +1,88 @@
 #include "Turret.h"
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
+#include "Components/Damage.h"
 #include "Components/Drawable.h"
 #include "Components/Projectile.h"
 #include "Components/Rigidbody.h"
+#include "Components/Transform.h"
+#include "Utility/UtiFuncs.h"
 
 namespace ms::inventory {
     namespace {
         void createProjectile(ecs::ECS& entityManager, const ecs::Entity owner,
-                              const sf::Vector2f origin, const float angle, const TurretStats& turretStats) {
-            //TODO
+                              const sf::Vector2f origin, const float angle,
+                              const TurretStats& turretStats,
+                              const ShootableSpell* spellInfo = nullptr) {
+            auto entity = entityManager.createEntity();
+            auto& tf = entityManager.addComponent<components::Transform>(entity);
+            tf.setPosition(origin);
+            const auto direction = utility::directionFromAngle(sf::radians(angle));
+            tf.setRotation(utility::rotationFromDirection(direction));
+
+            float speed = 500.f;
+            if (spellInfo && spellInfo->finalStats.speed.has_value()) {
+                speed = *spellInfo->finalStats.speed * turretStats.speedMultiplier;
+            }
+
+            auto& rb = entityManager.addComponent<components::Rigidbody>(entity);
+            rb.velocity = direction * speed;
+
+            // Default collision bounds for projectiles (e.g. 8x8)
+            sf::Vector2f boundsSize(8.f, 8.f);
+
+            auto& proj = entityManager.addComponent<components::Projectile>(entity);
+            proj.owner = owner;
+            if (spellInfo) {
+                proj.lifeTime = spellInfo->finalStats.lifeTime;
+                proj.friendlyFire = spellInfo->finalStats.friendlyFire;
+                proj.piercing = spellInfo->finalStats.Piercing;
+                proj.triggerType = spellInfo->finalStats.triggerType;
+                proj.timer = spellInfo->finalStats.timerLifeTime.value_or(0.f);
+                proj.payload = spellInfo->payload;
+                proj.modifierHooks = spellInfo->modifierHooks;
+
+                // Attach visual representation (Drawable) to projectile
+                if (const auto* animatedSprite = spellInfo->spell.getProjectileSprite()) {
+                    components::Drawable drawable;
+                    drawable.sprite = animatedSprite->createInstance();
+                    boundsSize = sf::Vector2f(static_cast<float>(animatedSprite->rect.size.x),
+                                             static_cast<float>(animatedSprite->rect.size.y));
+                    entityManager.addComponent<components::Drawable>(entity, std::move(drawable));
+                } else if (const auto* icon = spellInfo->spell.getIcon()) {
+                    components::Drawable drawable;
+                    drawable.sprite.emplace(icon->getTexture(), icon->getTextureRect(), 1, std::nullopt);
+                    boundsSize = sf::Vector2f(static_cast<float>(icon->getTextureRect().size.x),
+                                             static_cast<float>(icon->getTextureRect().size.y));
+                    entityManager.addComponent<components::Drawable>(entity, std::move(drawable));
+                }
+
+                // Run onInit hooks (one-time initialization)
+                ModifierContext ctx{
+                    .entityManager = entityManager,
+                    .projectileEntity = entity,
+                    .targetEntity = 0,
+                    .hitNormal = {},
+                    .deltaTime = 0.f
+                };
+                for (const auto& hook : proj.modifierHooks) {
+                    if (hook.onInit) {
+                        hook.onInit(ctx);
+                    }
+                }
+            }
+
+            // Set initial centered bounds based on sprite dimensions
+            rb.bounds = utility::centeredRect(origin, boundsSize);
+
+            auto& dmg = entityManager.addComponent<components::DamageAmount>(entity);
+            dmg.type = components::DamageType::Projectile;
+            if (spellInfo && spellInfo->finalStats.damage.has_value()) {
+                dmg.amount = *spellInfo->finalStats.damage;
+            }
         }
     }
 
@@ -54,9 +125,21 @@ namespace ms::inventory {
 
     void Turret::shoot(ecs::ECS& entityManager, const ecs::Entity owner,
                        const sf::Vector2f origin, const float aimAngleRadians) {
-        //TODO
+        if (!readyToShoot()) return;
+
         Payload payload(this);
-        auto vec_payloads = payload.gatherPayloadedSpells();
+        auto& vec_payloads = payload.gatherPayloadedSpells();
+
+        for (const auto& payloadGroup : vec_payloads) {
+            const auto& spells = payloadGroup.resolvedSpells;
+            if (spells.empty()) continue;
+
+            auto angles = payloadGroup.formation.calculateAngles(spells.size(), aimAngleRadians);
+            for (std::size_t i = 0; i < spells.size(); ++i) {
+                float angle = (i < angles.size()) ? angles[i] : aimAngleRadians;
+                createProjectile(entityManager, owner, origin, angle, stats, &spells[i]);
+            }
+        }
     }
 
     std::size_t Turret::addSpellSlot() {
