@@ -18,8 +18,8 @@
 #include "Components/TurretMountLayout.h"
 #include "Components/Transform.h"
 #include "ECS/ECS.h"
+#include "ECS/World.h"
 #include "Inventory/Inventory.h"
-#include "Systems/SpatialHashing/Quadtree.h"
 #include "Utility/UtiFuncs.h"
 
 namespace ms::systems {
@@ -32,20 +32,19 @@ namespace ms::systems {
         };
 
         inventory::Inventory& inventory;
-        sf::RenderWindow& window;
-        Quadtree& quadtree;
 
     public:
-        TurretSystem(inventory::Inventory& inventory, sf::RenderWindow& window,
-                     Quadtree& quadtree)
-            : inventory(inventory), window(window), quadtree(quadtree) {}
+        explicit TurretSystem(inventory::Inventory& inventory)
+            : inventory(inventory) {}
 
         void update(const float elapsedTime) override {
             synchronizeTurretEntities();
             std::vector<ShotRequest> shots;
             const bool firing = isFiring();
+            auto& window = getWorld().getMainWindow();
             const auto mouseTarget = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-            ecs->view<components::Player, components::Transform, components::Drawable,
+            getWorld().getECS()
+                .view<components::Player, components::Transform, components::Drawable,
                       components::TurretMountLayout>()
                 .each([this, elapsedTime, firing, mouseTarget, &shots](
                     const ecs::Entity playerEntity,
@@ -58,6 +57,7 @@ namespace ms::systems {
                                         mountLayout, mouseTarget, elapsedTime, firing, shots);
                 });
             fireShots(shots);
+            inventory.updateUI();
         }
 
     private:
@@ -72,10 +72,11 @@ namespace ms::systems {
         }
 
         void synchronizeTurretEntities() {
+            auto& entityManager = getWorld().getECS();
             const auto mountCount = inventory.turretMountCount();
             while (turretEntities.size() > mountCount) {
-                if (turretEntities.back() && ecs->isEntityAlive(*turretEntities.back())) {
-                    ecs->destroyEntity(*turretEntities.back());
+                if (turretEntities.back() && entityManager.isEntityAlive(*turretEntities.back())) {
+                    entityManager.destroyEntity(*turretEntities.back());
                 }
                 turretEntities.pop_back();
             }
@@ -85,20 +86,22 @@ namespace ms::systems {
                 const auto* turret = inventory.turretAt(index);
                 auto& entity = turretEntities[index];
                 if (!turret) {
-                    if (entity && ecs->isEntityAlive(*entity)) ecs->destroyEntity(*entity);
+                    if (entity && entityManager.isEntityAlive(*entity)) {
+                        entityManager.destroyEntity(*entity);
+                    }
                     entity.reset();
                     continue;
                 }
 
-                if (!entity || !ecs->isEntityAlive(*entity)) {
-                    entity = ecs->createEntity();
-                    ecs->addComponent<components::Transform>(*entity);
+                if (!entity || !entityManager.isEntityAlive(*entity)) {
+                    entity = entityManager.createEntity();
+                    entityManager.addComponent<components::Transform>(*entity);
                 }
 
                 const auto* icon = turret->getIcon();
                 if (icon) {
-                    if (ecs->hasComponent<components::Drawable>(*entity)) {
-                        auto& drawable = ecs->getComponent<components::Drawable>(*entity);
+                    if (entityManager.hasComponent<components::Drawable>(*entity)) {
+                        auto& drawable = entityManager.getComponent<components::Drawable>(*entity);
                         if (drawable.sprite) {
                             drawable.sprite->sprite = *icon;
                         } else {
@@ -112,10 +115,10 @@ namespace ms::systems {
                         sprite.sprite.setColor(icon->getColor());
                         components::Drawable drawable;
                         drawable.sprite = std::move(sprite);
-                        ecs->addComponent<components::Drawable>(*entity, std::move(drawable));
+                        entityManager.addComponent<components::Drawable>(*entity, std::move(drawable));
                     }
-                } else if (ecs->hasComponent<components::Drawable>(*entity)) {
-                    ecs->removeComponent<components::Drawable>(*entity);
+                } else if (entityManager.hasComponent<components::Drawable>(*entity)) {
+                    entityManager.removeComponent<components::Drawable>(*entity);
                 }
             }
         }
@@ -151,14 +154,16 @@ namespace ms::systems {
             const sf::Vector2f mouseTarget,
             const float elapsedTime,
             const bool firing) {
+            auto& entityManager = getWorld().getECS();
             auto* turret = inventory.turretAt(mountIndex);
             if (!turret || mountIndex >= turretEntities.size() ||
                 !turretEntities[mountIndex] ||
-                !ecs->isEntityAlive(*turretEntities[mountIndex])) {
+                !entityManager.isEntityAlive(*turretEntities[mountIndex])) {
                 return std::nullopt;
             }
 
-            auto& turretTransform = ecs->getComponent<components::Transform>(*turretEntities[mountIndex]);
+            auto& turretTransform =
+                entityManager.getComponent<components::Transform>(*turretEntities[mountIndex]);
             turret->updateCooldown(elapsedTime);
 
             const auto mountPosition = playerTransform.getTransform().transformPoint(
@@ -186,15 +191,17 @@ namespace ms::systems {
         }
 
         void fireShots(const std::vector<ShotRequest>& shots) {
+            auto& entityManager = getWorld().getECS();
             for (const auto& [mountIndex, owner, origin, aimAngleRadians] : shots) {
                 if (auto* turret = inventory.turretAt(mountIndex)) {
-                    turret->shoot(*ecs, owner, origin, aimAngleRadians);
+                    turret->shoot(entityManager, owner, origin, aimAngleRadians);
                 }
             }
         }
 
         std::optional<sf::Vector2f> findNearestEnemy(
             const ecs::Entity playerEntity, const sf::Vector2f origin) const {
+            const auto& quadtree = getWorld().getQuadtree();
             const auto& bounds = quadtree.worldBounds;
             const float maxRadius = std::max({
                 std::abs(origin.x - bounds.position.x),
@@ -231,13 +238,15 @@ namespace ms::systems {
             const sf::Vector2f origin,
             std::optional<sf::Vector2f>& closest,
             float& closestDistanceSquared) const {
-            if (entity == playerEntity || !ecs->isEntityAlive(entity) ||
-                !ecs->hasComponent<components::Enemy>(entity) ||
-                !ecs->hasComponent<components::Transform>(entity)) {
+            auto& entityManager = getWorld().getECS();
+            if (entity == playerEntity || !entityManager.isEntityAlive(entity) ||
+                !entityManager.hasComponent<components::Enemy>(entity) ||
+                !entityManager.hasComponent<components::Transform>(entity)) {
                 return;
             }
 
-            const auto position = ecs->getComponent<components::Transform>(entity).getPosition();
+            const auto position =
+                entityManager.getComponent<components::Transform>(entity).getPosition();
             const float distanceSquared = utility::squaredDistance(position, origin);
             if (distanceSquared < closestDistanceSquared) {
                 closestDistanceSquared = distanceSquared;

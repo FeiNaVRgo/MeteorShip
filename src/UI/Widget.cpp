@@ -5,6 +5,8 @@
 #include "Widget.h"
 
 #include <algorithm>
+#include <cstdio>
+#include <iostream>
 #include <SFML/Graphics/Texture.hpp>
 
 void ms::ui::WidgetDrawer::handleClick(
@@ -68,6 +70,43 @@ void ms::ui::WidgetDrawer::operator()(widgets::InventorySlotWidget &w) const {
     nk_style_pop_color(ctx);
 
     handleClick(clicked, w.onClick);
+}
+
+void ms::ui::WidgetDrawer::operator()(widgets::TurretStatusWidget &w) const {
+    if (!w.visible) return;
+
+    struct nk_rect bounds{};
+    nk_widget(&bounds, ctx);
+
+    const float manaRatio = w.manaMax > 0.f
+        ? std::clamp(w.mana / w.manaMax, 0.f, 1.f)
+        : 0.f;
+    const float rechargeRatio = w.rechargeTime > 0.f
+        ? std::clamp(w.rechargeRemaining / w.rechargeTime, 0.f, 1.f)
+        : 0.f;
+    auto* canvas = nk_window_get_canvas(ctx);
+    const auto background = nk_rect(bounds.x, bounds.y, bounds.w, bounds.h);
+    nk_fill_rect(canvas, background, 1.f, nk_rgb(35, 40, 48));
+
+    const float manaHeight = bounds.h * manaRatio;
+    nk_fill_rect(canvas,
+                 nk_rect(bounds.x, bounds.y + bounds.h - manaHeight, bounds.w * 0.65f, manaHeight),
+                 1.f, nk_rgb(45, 145, 235));
+
+    const float rechargeHeight = bounds.h * rechargeRatio;
+    nk_fill_rect(canvas,
+                 nk_rect(bounds.x + bounds.w * 0.7f,
+                         bounds.y + bounds.h - rechargeHeight,
+                         bounds.w * 0.3f, rechargeHeight),
+                 1.f, nk_rgb(235, 155, 45));
+
+    if (nk_input_is_mouse_hovering_rect(&ctx->input, bounds)) {
+        char tooltip[96];
+        std::snprintf(tooltip, sizeof(tooltip), "Mana: %.1f / %.1f\nRecharge: %.1f s",
+                      static_cast<double>(w.mana), static_cast<double>(w.manaMax),
+                      static_cast<double>(w.rechargeRemaining));
+        nk_tooltip(ctx, tooltip);
+    }
 }
 
 void ms::ui::WidgetDrawer::operator()(widgets::SliderWidget &w) const { nk_slider_float(ctx, w.min, &w.value, w.max, w.step); }

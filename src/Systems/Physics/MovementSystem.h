@@ -8,13 +8,14 @@
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
 #include "ECS/ECS.h"
+#include "ECS/World.h"
 #include "Utility/UtiFuncs.h"
 
 namespace ms::systems {
     class MovementSystem : public ecs::System {
     public:
         void update(float deltaTime) override {
-            ecs->view<components::Rigidbody, components::Transform>()
+            getWorld().getECS().view<components::Rigidbody, components::Transform>()
                 .each(
                     [deltaTime](ecs::Entity const& entity,
                                 components::Rigidbody& rigidbody,

@@ -9,13 +9,14 @@
 #include "Components/Player.h"
 #include "Components/Transform.h"
 #include "ECS/ECS.h"
+#include "ECS/World.h"
 #include "Utility/UtiFuncs.h"
 
 namespace ms::systems {
     class PlayerSystem : public ecs::System {
     public:
         void update(float deltaTime) override {
-            ecs->view<components::Player, components::Transform>()
+            getWorld().getECS().view<components::Player, components::Transform>()
                 .each([deltaTime](ecs::Entity const&,
                                   components::Player&,
                                   components::Transform& transform)

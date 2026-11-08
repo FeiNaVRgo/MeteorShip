@@ -17,6 +17,7 @@ namespace ms::ui {
         struct ButtonWidget;
         struct InventorySlotWidget;
         struct LabelWidget;
+        struct TurretStatusWidget;
     }
 }
 
@@ -65,6 +66,11 @@ namespace ms::inventory {
             ui::widgets::ButtonWidget* widget;
         };
 
+        struct TurretStatusWidgetEntry {
+            std::size_t turretIndex;
+            ui::widgets::TurretStatusWidget* widget;
+        };
+
         std::vector<std::optional<Spell>> spells;
         std::vector<std::optional<Turret>> turrets;
         std::optional<SlotAddress> selectedSlot;
@@ -73,6 +79,7 @@ namespace ms::inventory {
         ui::widgets::LabelWidget* statusWidget = nullptr;
         std::vector<SlotWidgetEntry> slotWidgets;
         std::vector<TurretModeWidgetEntry> turretModeWidgets;
+        std::vector<TurretStatusWidgetEntry> turretStatusWidgets;
         std::vector<std::vector<ui::UINode*>> turretColumnSlots;
 
         static constexpr float UiMargin = 12.f;
@@ -81,10 +88,15 @@ namespace ms::inventory {
         static constexpr float UiGap = 4.f;
         static constexpr float UiStatusWidth = 600.f;
         static constexpr float UiModeButtonSize = 14.f;
+        static constexpr float UiManaBarGap = 2.f;
+        static constexpr float UiManaBarWidth = 8.f;
+        static constexpr float UiTurretColumnPitch =
+            UiSlotSize + UiManaBarGap + UiManaBarWidth + UiGap;
 
         ui::UINode& addLabel(std::string text, sf::Vector2f position, sf::Vector2f size);
         ui::UINode& addSlot(const SlotAddress& address, sf::Vector2f position);
         ui::UINode& addTurretModeToggle(std::size_t turretIndex, sf::Vector2f position);
+        ui::UINode& addTurretStatus(std::size_t turretIndex, sf::Vector2f position);
         void ensureTurretColumnSlots();
         void refreshUI();
         void handleSlotClick(const SlotAddress& address);
@@ -102,6 +114,7 @@ namespace ms::inventory {
                            std::size_t turretMountCount = DefaultTurretMountCount);
 
         void buildUI(ui::UINode& root);
+        void updateUI() { refreshUI(); }
 
         std::size_t spellSlotCount() const { return spells.size(); }
         std::size_t turretMountCount() const { return turrets.size(); }

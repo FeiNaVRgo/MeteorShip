@@ -10,16 +10,15 @@
 #include "Components/Drawable.h"
 #include "Components/Transform.h"
 #include "ECS/ECS.h"
+#include "ECS/World.h"
 
 namespace ms::systems {
     class DrawingSystem : public ecs::System {
-        sf::RenderWindow& renderWindow;
     public:
-        explicit DrawingSystem(sf::RenderWindow& _renderWindow) : renderWindow(_renderWindow) {}
-
         void update(float deltaTime) override {
-            ecs->view<components::Transform, components::Drawable>().each(
-                [this](ecs::Entity const& entity, components::Transform& transform, components::Drawable& drawable) {
+            auto& renderWindow = getWorld().getMainWindow();
+            getWorld().getECS().view<components::Transform, components::Drawable>().each(
+                [&renderWindow](ecs::Entity const& entity, components::Transform& transform, components::Drawable& drawable) {
                     sf::RenderStates states = sf::RenderStates::Default;
                     states.transform *= transform.getTransform();
 

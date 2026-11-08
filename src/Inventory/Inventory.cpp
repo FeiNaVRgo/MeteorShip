@@ -44,13 +44,27 @@ namespace ms::inventory {
         return node;
     }
 
+    ui::UINode& Inventory::addTurretStatus(
+        const std::size_t turretIndex, const sf::Vector2f position) {
+        auto& node = uiRoot->add(ui::widgets::TurretStatusWidget{}, {UiManaBarWidth, UiSlotSize});
+        node.alignToParent(ui::Alignment::TopLeft, position);
+        turretStatusWidgets.push_back({
+            turretIndex, node.getWidget<ui::widgets::TurretStatusWidget>()
+        });
+        return node;
+    }
+
     void Inventory::buildUI(ui::UINode& root) {
         uiRoot = &root;
         slotWidgets.clear();
         turretModeWidgets.clear();
+        turretStatusWidgets.clear();
         turretColumnSlots.clear();
 
-        addLabel("TURRETS", {UiMargin, UiMargin}, {UiSlotSize * 2.f + UiGap, UiHeaderHeight});
+        const auto turretHeaderWidth = turrets.empty()
+            ? 0.f
+            : static_cast<float>(turrets.size()) * UiTurretColumnPitch - UiGap;
+        addLabel("TURRETS", {UiMargin, UiMargin}, {turretHeaderWidth, UiHeaderHeight});
 
         const auto spellRowWidth = spells.empty()
             ? 0.f
@@ -60,11 +74,12 @@ namespace ms::inventory {
 
         const auto slotY = UiMargin + UiHeaderHeight + UiGap;
         for (std::size_t i = 0; i < turrets.size(); ++i) {
-            const auto x = UiMargin + static_cast<float>(i) * (UiSlotSize + UiGap);
+            const auto x = UiMargin + static_cast<float>(i) * UiTurretColumnPitch;
             addSlot({SlotCollection::TurretMount, i}, {x, slotY});
             addTurretModeToggle(
                 i,
                 {x + UiSlotSize - UiModeButtonSize, slotY + UiSlotSize - UiModeButtonSize});
+            addTurretStatus(i, {x + UiSlotSize + UiManaBarGap, slotY});
         }
 
         for (std::size_t i = 0; i < spells.size(); ++i) {
@@ -92,7 +107,7 @@ namespace ms::inventory {
             const auto desiredCount = turretSpellSlotCount(turretIndex);
             while (nodes.size() < desiredCount) {
                 const auto index = nodes.size();
-                const auto x = UiMargin + static_cast<float>(turretIndex) * (UiSlotSize + UiGap);
+                const auto x = UiMargin + static_cast<float>(turretIndex) * UiTurretColumnPitch;
                 const auto y = UiMargin + UiHeaderHeight + UiGap + UiSlotSize + UiGap +
                     static_cast<float>(index) * (UiSlotSize + UiGap);
                 nodes.push_back(&addSlot(
@@ -127,6 +142,18 @@ namespace ms::inventory {
             } else {
                 entry.widget->text = turret->getTargetMode() == TurretTargetMode::Automatic ? "A" : "M";
             }
+        }
+
+        for (const auto& entry : turretStatusWidgets) {
+            const auto* turret = turretAt(entry.turretIndex);
+            entry.widget->visible = turret != nullptr;
+            if (!turret) continue;
+
+            const auto& stats = turret->getStats();
+            entry.widget->mana = turret->getMana();
+            entry.widget->manaMax = stats.manaMax;
+            entry.widget->rechargeRemaining = turret->getRechargeRemaining();
+            entry.widget->rechargeTime = stats.rechargeTime;
         }
     }
 

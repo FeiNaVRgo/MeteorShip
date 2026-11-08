@@ -13,25 +13,32 @@
 
 namespace ms {
     class Game;
+    namespace systems {
+        class OpenCLCollisionDetector;
+    }
 
     class World {
+        Game& game;
         ecs::ECS ecs;
         systems::Quadtree m_quadtree;
         EventDispatcher eventDispatcher;
     public:
         World(Game& game);
 
+        Game& getGame() const { return game; }
         ecs::ECS& getECS() { return ecs; }
         systems::Quadtree& getQuadtree() { return m_quadtree; }
         EventDispatcher& getEventDispatcher() { return eventDispatcher; }
+        sf::RenderWindow& getMainWindow() const;
+        systems::OpenCLCollisionDetector& getCollisionDetector() const;
 
         void update(float deltaTime) {
             ecs.update(deltaTime);
         }
 
         template<typename T, typename... Args>
-        void registerSystem(Args&&... args) {
-            ecs.registerSystem<T>(std::forward<Args>(args)...);
+        T& registerSystem(Args&&... args) {
+            return ecs.registerSystem<T>(*this, std::forward<Args>(args)...);
         }
     };
 

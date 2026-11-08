@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "Components/Rigidbody.h"
+#include "ECS/World.h"
 #include "Systems/Physics/OpenCLCollisionDetector.h"
 
 namespace ms::systems {
@@ -27,17 +28,14 @@ namespace ms::systems {
         }
     }
 
-    CollisionSystem::CollisionSystem(
-        Quadtree &quadtree, EventDispatcher &eventDispatcher,
-        OpenCLCollisionDetector &collisionDetector)
-        : quadtree(quadtree),
-          eventDispatcher(eventDispatcher),
-          collisionDetector(collisionDetector) {
-    }
-
     void CollisionSystem::update(float) {
+        auto& world = getWorld();
+        auto& entityManager = world.getECS();
+        auto& quadtree = world.getQuadtree();
+        auto& eventDispatcher = world.getEventDispatcher();
+        auto& collisionDetector = world.getCollisionDetector();
         std::unordered_map<ecs::Entity, Aabb> entityBounds;
-        ecs->view<components::Rigidbody>().each(
+        entityManager.view<components::Rigidbody>().each(
             [&entityBounds](ecs::Entity entity, const components::Rigidbody &rigidbody) {
                 entityBounds.emplace(entity, toAabb(rigidbody.bounds));
             });

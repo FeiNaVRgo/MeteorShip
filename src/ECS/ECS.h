@@ -20,6 +20,8 @@
 #include <stack>
 
 namespace ms {
+    class World;
+
     constexpr static inline uint8_t MAX_COMPONENTS = 32;
 
     namespace ecs {
@@ -366,14 +368,21 @@ namespace ms {
         class ECS;
 
         class System {
-        protected:
-            ECS* ecs = nullptr;
+        private:
+            World* world = nullptr;
             std::function<bool()> conditionToUpdate;
+
+            friend class ECS;
+
         public:
             virtual ~System() = default;
-            void setEcs(ECS* _ecs) { ecs = _ecs; };
 
-            virtual void update(float deltaTime){}
+            [[nodiscard]] World& getWorld() const {
+                assert(world != nullptr);
+                return *world;
+            }
+
+            virtual void update(float deltaTime) {}
         };
 
         class ECS {
@@ -431,9 +440,9 @@ namespace ms {
             }
 
             template<typename S, typename ...Args>
-            S& registerSystem(Args&& ...args) {
+            S& registerSystem(World& world, Args&& ...args) {
                 auto system = std::make_unique<S>(std::forward<Args>(args)...);
-                system->setEcs(this);
+                system->world = &world;
                 S& ref = *system;
                 systems.emplace_back(std::move(system));
                 return ref;

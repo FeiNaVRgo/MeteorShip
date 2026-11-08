@@ -7,23 +7,20 @@
 
 #include "Quadtree.h"
 #include "ECS/ECS.h"
+#include "ECS/World.h"
 #include "Components/Rigidbody.h"
 #include "Events/EventDispatcher.h"
 
 namespace ms::systems {
     class SpatialHash : public ecs::System {
-    private:
-        Quadtree& m_quadtree;
-        EventDispatcher& eventDispatcher;
     public:
-        explicit SpatialHash(Quadtree& quadtree, EventDispatcher& eventDispatcher) : m_quadtree(quadtree), eventDispatcher(eventDispatcher) {}
-
         void update(float deltaTime) override {
-            ecs->view<components::Rigidbody>()
+            getWorld().getECS().view<components::Rigidbody>()
             .each([this](ecs::Entity const& entity, components::Rigidbody& rigidbody) {
-                m_quadtree.update(entity, rigidbody.bounds);
-                if (!m_quadtree.worldBounds.findIntersection(rigidbody.bounds).has_value()) {
-                    eventDispatcher.push(Event(Event::RemoveEntity(entity)));
+                auto& world = getWorld();
+                world.getQuadtree().update(entity, rigidbody.bounds);
+                if (!world.getQuadtree().worldBounds.findIntersection(rigidbody.bounds).has_value()) {
+                    world.getEventDispatcher().push(Event(Event::RemoveEntity(entity)));
                 }
             });
         }

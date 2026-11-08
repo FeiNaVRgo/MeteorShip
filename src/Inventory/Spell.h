@@ -310,6 +310,7 @@ namespace ms::inventory {
     struct ShootableSpell {
         Spell spell;
         ProjectileStats finalStats;
+        SpellFormation payloadFormation;
         std::vector<ProjectileModifierHook> modifierHooks;
         std::vector<UtilitySpellFunc> utility;
         // Nested payload: spells triggered on collision/timer/death
@@ -362,6 +363,7 @@ namespace ms::inventory {
         struct PayloadNode {
             Spell spell;
             ProjectileStats combinedStats;
+            SpellFormation payloadFormation;
             std::vector<ProjectileModifierHook> modifierHooks;
             std::vector<UtilitySpellFunc> utility;
             std::vector<std::unique_ptr<PayloadNode>> children;

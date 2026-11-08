@@ -6,5 +6,16 @@
 
 namespace ms {
     World::World(Game& game)
-        : m_quadtree({{0.f, 0.f}, {static_cast<float>(game.getMainWindow().getSize().x), static_cast<float>(game.getMainWindow().getSize().y)}}) {}
+        : game(game),
+          m_quadtree({{0.f, 0.f}, {
+              static_cast<float>(game.getMainWindow().getSize().x),
+              static_cast<float>(game.getMainWindow().getSize().y)}}) {}
+
+    sf::RenderWindow& World::getMainWindow() const {
+        return game.getMainWindow();
+    }
+
+    systems::OpenCLCollisionDetector& World::getCollisionDetector() const {
+        return game.getCollisionDetector();
+    }
 }

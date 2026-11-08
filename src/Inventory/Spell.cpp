@@ -274,7 +274,7 @@ namespace ms::inventory {
         return {
             makeDamagePlus(15.f),
             makeHoming(10.f, 450.f),
-            makeSparkBoltWithTrigger(),
+            makeSparkBoltWithTimer(),
             makeFormationTriDirectional(),
             makeSparkBolt(),
             makeSparkBolt(),
@@ -386,6 +386,7 @@ namespace ms::inventory {
                 // In Noita, a trigger spell's payload starts a sub-draw from the deck
                 CastState subState;
                 node->children = evaluateDraw(1, subState, wrapped, recursionDepth + 1);
+                node->payloadFormation = subState.formation.value_or(SpellFormation{});
 
                 state.manaDrain += subState.manaDrain;
                 state.castDelay += subState.castDelay;
@@ -403,6 +404,7 @@ namespace ms::inventory {
             ShootableSpell shootable;
             shootable.spell = node.spell;
             shootable.finalStats = node.combinedStats;
+            shootable.payloadFormation = node.payloadFormation;
             shootable.modifierHooks = node.modifierHooks;
             shootable.utility = node.utility;
             for (const auto& child : node.children) {

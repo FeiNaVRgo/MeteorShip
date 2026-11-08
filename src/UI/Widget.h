@@ -35,6 +35,14 @@ namespace ms::ui {
             bool visible = true;
         };
 
+        struct TurretStatusWidget {
+            float mana = 0.f;
+            float manaMax = 0.f;
+            float rechargeRemaining = 0.f;
+            float rechargeTime = 0.f;
+            bool visible = false;
+        };
+
         struct SliderWidget {
             float value = 0.5f;
             float min = 0.0f;
@@ -64,6 +72,7 @@ namespace ms::ui {
         widgets::LabelWidget,
         widgets::ButtonWidget,
         widgets::InventorySlotWidget,
+        widgets::TurretStatusWidget,
         widgets::SliderWidget,
         widgets::CheckboxWidget,
         widgets::PropertyWidget,
@@ -96,6 +105,8 @@ namespace ms::ui {
         void operator()(widgets::ButtonWidget& w)   const;
 
         void operator()(widgets::InventorySlotWidget& w) const;
+
+        void operator()(widgets::TurretStatusWidget& w) const;
 
         void operator()(widgets::SliderWidget& w)   const;
 
