@@ -108,7 +108,7 @@ namespace ms::systems {
     CollisionResponseSystem::CollisionResponseSystem(utility::EventHandling& eventHandler) {
         collisionDetectedConn = utility::EventSignalFactory::createEventSignal<Event::CollisionDetected>(
             eventHandler,
-            [this](const Event::CollisionDetected& event) { handleCollisionDetected(event); });
+            [this](const Event::CollisionDetected& event) { handleCollisionDetected(event); });//still contained in one scene, all systems regarding collisions are in main scene
     }
 
     void CollisionResponseSystem::handleCollisionDetected(const Event::CollisionDetected& event) {
