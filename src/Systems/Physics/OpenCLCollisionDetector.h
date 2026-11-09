@@ -20,8 +20,6 @@ namespace ms::systems {
         float penetration{};
     };
 
-    using SatTriangle = std::array<sf::Vector2f, 3>;
-
     class OpenCLCollisionDetector {
         class Impl;
         std::unique_ptr<Impl> impl;
@@ -35,9 +33,6 @@ namespace ms::systems {
 
         [[nodiscard]] std::optional<std::vector<SatContact>> detect(
             const std::vector<SatTrianglePair>& trianglePairs);
-
-        [[nodiscard]] std::optional<std::vector<std::vector<SatTriangle>>> triangulate(
-            const std::vector<std::vector<sf::Vector2f>>& polygons);
     };
 }
 

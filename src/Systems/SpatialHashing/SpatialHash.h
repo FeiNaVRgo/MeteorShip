@@ -51,7 +51,8 @@ namespace ms::systems {
 
                     if (entityManager.hasComponent<components::CollisionShape>(entity)) {
                         for (const auto point :
-                             entityManager.getComponent<components::CollisionShape>(entity).vertices) {
+                             entityManager.getComponent<components::CollisionShape>(entity)
+                                 .getVertices()) {
                             transformPoint(point);
                         }
                     }

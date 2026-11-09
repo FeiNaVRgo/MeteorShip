@@ -1,15 +1,12 @@
 #include "CollisionResponseSystem.h"
 
 #include <cmath>
-#include <optional>
 
-#include "Components/CollisionShape.h"
 #include "Components/Player.h"
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
 #include "ECS/World.h"
 #include "Events/EventSignalFactory.h"
-#include "Systems/Physics/CollisionGeometry.h"
 
 namespace ms::systems {
     CollisionResponseSystem::CollisionResponseSystem(utility::EventHandling& eventHandler) {
@@ -24,33 +21,12 @@ namespace ms::systems {
         const auto second = event.second;
         if (!ecs.isEntityAlive(first) || !ecs.isEntityAlive(second) ||
             !ecs.hasComponent<components::Transform>(first) ||
-            !ecs.hasComponent<components::Transform>(second) ||
-            !ecs.hasComponent<components::CollisionShape>(first) ||
-            !ecs.hasComponent<components::CollisionShape>(second)) {
+            !ecs.hasComponent<components::Transform>(second)) {
             return;
         }
 
-        const auto polygonFor = [&ecs](const ecs::Entity entity) {
-            const auto& shape = ecs.getComponent<components::CollisionShape>(entity);
-            const auto& transform = ecs.getComponent<components::Transform>(entity);
-            return collision_geometry::transformPolygon(
-                shape.vertices, transform.getTransform());
-        };
-        const auto firstPolygon = polygonFor(first);
-        const auto secondPolygon = polygonFor(second);
-        std::optional<collision_geometry::Contact> contact;
-        if (collision_geometry::isConvex(firstPolygon) &&
-            collision_geometry::isConvex(secondPolygon)) {
-            contact = collision_geometry::intersectConvex(firstPolygon, secondPolygon);
-        } else {
-            contact = collision_geometry::intersect(
-                collision_geometry::triangulate(firstPolygon),
-                collision_geometry::triangulate(secondPolygon));
-        }
-        if (!contact || !std::isfinite(contact->penetration) ||
-            contact->penetration <= 0.f ||
-            !std::isfinite(contact->normal.x) ||
-            !std::isfinite(contact->normal.y)) {
+        if (!std::isfinite(event.penetration) || event.penetration <= 0.f ||
+            !std::isfinite(event.normal.x) || !std::isfinite(event.normal.y)) {
             return;
         }
 
@@ -73,13 +49,13 @@ namespace ms::systems {
         }
 
         const float normalLengthSquared =
-            contact->normal.x * contact->normal.x +
-            contact->normal.y * contact->normal.y;
+            event.normal.x * event.normal.x +
+            event.normal.y * event.normal.y;
         if (normalLengthSquared <= 1e-12f) {
             return;
         }
-        const auto normal = contact->normal / std::sqrt(normalLengthSquared);
-        const auto correction = normal * (contact->penetration / inverseMassSum);
+        const auto normal = event.normal / std::sqrt(normalLengthSquared);
+        const auto correction = normal * (event.penetration / inverseMassSum);
         const auto firstCorrection = -correction * firstInverseMass;
         const auto secondCorrection = correction * secondInverseMass;
         ecs.getComponent<components::Transform>(first).move(firstCorrection);

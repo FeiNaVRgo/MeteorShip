@@ -3,7 +3,6 @@
 
 #include "OpenCLCollisionDetector.h"
 
-#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -43,12 +42,8 @@ namespace ms::systems {
         cl_command_queue queue{};
         cl_program program{};
         cl_kernel satKernel{};
-        cl_kernel triangulationKernel{};
 
         void release() {
-            if (triangulationKernel) {
-                clReleaseKernel(std::exchange(triangulationKernel, nullptr));
-            }
             if (satKernel) clReleaseKernel(std::exchange(satKernel, nullptr));
             if (program) clReleaseProgram(std::exchange(program, nullptr));
             if (queue) clReleaseCommandQueue(std::exchange(queue, nullptr));
@@ -127,10 +122,6 @@ namespace ms::systems {
                 }
                 satKernel = clCreateKernel(program, "detect_sat_triangle_pairs", &error);
                 checkOpenCLError(error, "clCreateKernel(SAT)");
-                triangulationKernel =
-                    clCreateKernel(program, "triangulate_polygons", &error);
-                checkOpenCLError(error, "clCreateKernel(triangulation)");
-
                 size_t nameSize = 0;
                 clGetDeviceInfo(selectedDevice, CL_DEVICE_NAME, 0, nullptr, &nameSize);
                 std::string name(nameSize, '\0');
@@ -234,194 +225,6 @@ namespace ms::systems {
             }
         }
 
-        [[nodiscard]] std::optional<std::vector<std::vector<SatTriangle>>> triangulate(
-            const std::vector<std::vector<sf::Vector2f>>& polygons) {
-            if (!triangulationKernel) {
-                return std::nullopt;
-            }
-            std::vector<std::vector<SatTriangle>> result(polygons.size());
-            if (polygons.empty()) {
-                return result;
-            }
-            if (polygons.size() > std::numeric_limits<cl_uint>::max()) {
-                throw std::runtime_error("Too many polygons for the OpenCL triangulation kernel");
-            }
-
-            std::vector<float> vertices;
-            std::vector<cl_uint> polygonOffsets;
-            std::vector<cl_uint> polygonCounts;
-            std::vector<cl_uint> triangleOffsets;
-            std::size_t triangleCapacity = 0;
-            polygonOffsets.reserve(polygons.size());
-            polygonCounts.reserve(polygons.size());
-            triangleOffsets.reserve(polygons.size());
-            for (const auto& polygon : polygons) {
-                const auto vertexCount = vertices.size() / 2;
-                const auto maxIndexCount =
-                    static_cast<std::size_t>(std::numeric_limits<cl_uint>::max());
-                if (vertexCount > maxIndexCount ||
-                    polygon.size() > maxIndexCount - vertexCount) {
-                    throw std::runtime_error("Polygon exceeds OpenCL triangulation index limits");
-                }
-                polygonOffsets.push_back(static_cast<cl_uint>(vertexCount));
-                polygonCounts.push_back(static_cast<cl_uint>(polygon.size()));
-                triangleOffsets.push_back(static_cast<cl_uint>(triangleCapacity));
-                if (polygon.size() >= 3) {
-                    triangleCapacity += polygon.size() - 2;
-                    if (triangleCapacity > std::numeric_limits<cl_uint>::max() / 3) {
-                        throw std::runtime_error("Triangulation output exceeds OpenCL index limits");
-                    }
-                }
-                for (const auto point : polygon) {
-                    vertices.push_back(point.x);
-                    vertices.push_back(point.y);
-                }
-            }
-
-            if (triangleCapacity == 0) {
-                return result;
-            }
-
-            std::vector<cl_uint> triangleCounts(polygons.size());
-            std::vector<cl_uint> statuses(polygons.size());
-            std::vector<cl_uint> outputIndices(triangleCapacity * 3);
-            std::vector<cl_uint> scratch(vertices.size() / 2);
-
-            cl_mem vertexBuffer{};
-            cl_mem polygonOffsetBuffer{};
-            cl_mem polygonCountBuffer{};
-            cl_mem triangleOffsetBuffer{};
-            cl_mem triangleBuffer{};
-            cl_mem triangleCountBuffer{};
-            cl_mem scratchBuffer{};
-            cl_mem statusBuffer{};
-            const auto createBuffer = [this](
-                const cl_mem_flags flags, const size_t size, const void* data) {
-                cl_int error = CL_SUCCESS;
-                const auto buffer = clCreateBuffer(
-                    context, flags | (data ? CL_MEM_COPY_HOST_PTR : 0),
-                    size, const_cast<void*>(data), &error);
-                checkOpenCLError(error, "clCreateBuffer(triangulation)");
-                return buffer;
-            };
-            try {
-                vertexBuffer = createBuffer(
-                    CL_MEM_READ_ONLY, vertices.size() * sizeof(float), vertices.data());
-                polygonOffsetBuffer = createBuffer(
-                    CL_MEM_READ_ONLY, polygonOffsets.size() * sizeof(cl_uint),
-                    polygonOffsets.data());
-                polygonCountBuffer = createBuffer(
-                    CL_MEM_READ_ONLY, polygonCounts.size() * sizeof(cl_uint),
-                    polygonCounts.data());
-                triangleOffsetBuffer = createBuffer(
-                    CL_MEM_READ_ONLY, triangleOffsets.size() * sizeof(cl_uint),
-                    triangleOffsets.data());
-                triangleBuffer = createBuffer(
-                    CL_MEM_WRITE_ONLY, outputIndices.size() * sizeof(cl_uint), nullptr);
-                triangleCountBuffer = createBuffer(
-                    CL_MEM_WRITE_ONLY, triangleCounts.size() * sizeof(cl_uint), nullptr);
-                scratchBuffer = createBuffer(
-                    CL_MEM_READ_WRITE, scratch.size() * sizeof(cl_uint), nullptr);
-                statusBuffer = createBuffer(
-                    CL_MEM_WRITE_ONLY, statuses.size() * sizeof(cl_uint), nullptr);
-
-                const auto polygonCount = static_cast<cl_uint>(polygons.size());
-                const std::array<cl_mem, 8> arguments{
-                    vertexBuffer, polygonOffsetBuffer, polygonCountBuffer,
-                    triangleOffsetBuffer, triangleBuffer, triangleCountBuffer,
-                    scratchBuffer, statusBuffer
-                };
-                for (cl_uint i = 0; i < arguments.size(); ++i) {
-                    checkOpenCLError(
-                        clSetKernelArg(
-                            triangulationKernel, i, sizeof(cl_mem), &arguments[i]),
-                        "clSetKernelArg(triangulation buffer)");
-                }
-                checkOpenCLError(
-                    clSetKernelArg(
-                        triangulationKernel, 8, sizeof(polygonCount), &polygonCount),
-                    "clSetKernelArg(polygon count)");
-                const size_t globalSize = polygons.size();
-                checkOpenCLError(
-                    clEnqueueNDRangeKernel(
-                        queue, triangulationKernel, 1, nullptr, &globalSize,
-                        nullptr, 0, nullptr, nullptr),
-                    "clEnqueueNDRangeKernel(triangulation)");
-                checkOpenCLError(
-                    clEnqueueReadBuffer(
-                        queue, triangleBuffer, CL_TRUE, 0,
-                        outputIndices.size() * sizeof(cl_uint),
-                        outputIndices.data(), 0, nullptr, nullptr),
-                    "clEnqueueReadBuffer(triangles)");
-                checkOpenCLError(
-                    clEnqueueReadBuffer(
-                        queue, triangleCountBuffer, CL_TRUE, 0,
-                        triangleCounts.size() * sizeof(cl_uint),
-                        triangleCounts.data(), 0, nullptr, nullptr),
-                    "clEnqueueReadBuffer(triangle counts)");
-                checkOpenCLError(
-                    clEnqueueReadBuffer(
-                        queue, statusBuffer, CL_TRUE, 0,
-                        statuses.size() * sizeof(cl_uint),
-                        statuses.data(), 0, nullptr, nullptr),
-                    "clEnqueueReadBuffer(triangulation statuses)");
-
-                for (std::size_t polygonIndex = 0;
-                     polygonIndex < polygons.size(); ++polygonIndex) {
-                    if (statuses[polygonIndex] == 0) {
-                        continue;
-                    }
-                    const auto outputOffset = triangleOffsets[polygonIndex] * 3;
-                    const auto triangleCount = triangleCounts[polygonIndex];
-                    const auto maxTriangleCount = polygonCounts[polygonIndex] >= 3
-                                                      ? polygonCounts[polygonIndex] - 2
-                                                      : 0;
-                    if (triangleCount > maxTriangleCount) {
-                        throw std::runtime_error("OpenCL triangulation returned an invalid count");
-                    }
-                    auto& polygonTriangles = result[polygonIndex];
-                    polygonTriangles.reserve(triangleCount);
-                    for (cl_uint triangleIndex = 0;
-                         triangleIndex < triangleCount; ++triangleIndex) {
-                        SatTriangle triangle{};
-                        for (cl_uint vertexIndex = 0; vertexIndex < 3; ++vertexIndex) {
-                            const auto sourceIndex = outputIndices[
-                                outputOffset + triangleIndex * 3 + vertexIndex];
-                            if (sourceIndex >= vertices.size() / 2) {
-                                throw std::runtime_error(
-                                    "OpenCL triangulation returned an invalid vertex index");
-                            }
-                            triangle[vertexIndex] = {
-                                vertices[sourceIndex * 2], vertices[sourceIndex * 2 + 1]
-                            };
-                        }
-                        polygonTriangles.push_back(triangle);
-                    }
-                }
-                releaseBuffers({
-                    vertexBuffer, polygonOffsetBuffer, polygonCountBuffer,
-                    triangleOffsetBuffer, triangleBuffer, triangleCountBuffer,
-                    scratchBuffer, statusBuffer
-                });
-                return result;
-            } catch (...) {
-                releaseBuffers({
-                    vertexBuffer, polygonOffsetBuffer, polygonCountBuffer,
-                    triangleOffsetBuffer, triangleBuffer, triangleCountBuffer,
-                    scratchBuffer, statusBuffer
-                });
-                throw;
-            }
-        }
-
-        static void releaseBuffers(const std::array<cl_mem, 8>& buffers) {
-            for (const auto buffer : buffers) {
-                if (buffer) {
-                    clReleaseMemObject(buffer);
-                }
-            }
-        }
-
         void disable() {
             release();
         }
@@ -440,20 +243,6 @@ namespace ms::systems {
             impl->disable();
             std::cerr << "OpenCL SAT collision detection failed; "
                          "using CPU SAT collision detection: "
-                      << error.what() << '\n';
-            return std::nullopt;
-        }
-    }
-
-    std::optional<std::vector<std::vector<SatTriangle>>>
-    OpenCLCollisionDetector::triangulate(
-        const std::vector<std::vector<sf::Vector2f>>& polygons) {
-        try {
-            return impl->triangulate(polygons);
-        } catch (const std::exception& error) {
-            impl->disable();
-            std::cerr << "OpenCL polygon triangulation failed; "
-                         "using CPU polygon triangulation: "
                       << error.what() << '\n';
             return std::nullopt;
         }

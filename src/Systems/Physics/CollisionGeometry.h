@@ -6,6 +6,7 @@
 #include <cmath>
 #include <limits>
 #include <optional>
+#include <span>
 #include <vector>
 
 #include <SFML/Graphics/Rect.hpp>
@@ -165,13 +166,13 @@ namespace ms::systems::collision_geometry {
     }
 
     inline std::optional<Contact> intersectConvex(
-        const Polygon& first,
-        const Polygon& second) {
+        const std::span<const sf::Vector2f> first,
+        const std::span<const sf::Vector2f> second) {
         constexpr float epsilon = 1e-6f;
         float minimumOverlap = std::numeric_limits<float>::max();
         sf::Vector2f minimumAxis{};
 
-        const auto testAxes = [&](const Polygon& source) {
+        const auto testAxes = [&](const std::span<const sf::Vector2f> source) {
             for (std::size_t i = 0; i < source.size(); ++i) {
                 const auto edge = source[(i + 1) % source.size()] - source[i];
                 const float length = std::sqrt(edge.x * edge.x + edge.y * edge.y);

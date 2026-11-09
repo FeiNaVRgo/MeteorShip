@@ -36,16 +36,16 @@ namespace ms::systems {
             sf::RenderTarget& target,
             const components::CollisionShape& collisionShape,
             const components::Transform& transform) {
-            if (collisionShape.vertices.size() < 3) {
+            if (collisionShape.getVertices().size() < 3) {
                 return;
             }
 
             sf::VertexArray outline(
-                sf::PrimitiveType::LineStrip, collisionShape.vertices.size() + 1);
+                sf::PrimitiveType::LineStrip, collisionShape.getVertices().size() + 1);
             const auto& transformMatrix = transform.getTransform();
-            for (std::size_t i = 0; i <= collisionShape.vertices.size(); ++i) {
+            for (std::size_t i = 0; i <= collisionShape.getVertices().size(); ++i) {
                 outline[i].position = transformMatrix.transformPoint(
-                    collisionShape.vertices[i % collisionShape.vertices.size()]);
+                    collisionShape.getVertices()[i % collisionShape.getVertices().size()]);
                 outline[i].color = sf::Color::Yellow;
             }
             target.draw(outline);

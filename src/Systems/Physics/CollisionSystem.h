@@ -8,13 +8,13 @@
 
 namespace ms::systems {
     class CollisionSystem : public ecs::System {
-        std::vector<std::pair<ecs::Entity, ecs::Entity> > collisions;
+        //std::vector<std::pair<ecs::Entity, ecs::Entity> > collisions;
 
     public:
         void update(float deltaTime) override;
 
-        [[nodiscard]] const std::vector<std::pair<ecs::Entity, ecs::Entity> > &
-        getCollisions() const { return collisions; }
+        //[[nodiscard]] const std::vector<std::pair<ecs::Entity, ecs::Entity> > &
+        //getCollisions() const { return collisions; }
     };
 }
 

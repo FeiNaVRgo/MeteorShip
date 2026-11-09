@@ -1,6 +1,7 @@
 #include "CollisionSystem.h"
 
 #include <algorithm>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -17,93 +18,87 @@ namespace ms::systems {
         auto& entityManager = world.getECS();
         auto& quadtree = world.getQuadtree();
         auto& eventDispatcher = world.getEventDispatcher();
-        std::vector<ecs::Entity> polygonEntities;
-        std::vector<std::vector<sf::Vector2f>> polygons;
-        std::unordered_map<ecs::Entity, sf::FloatRect> entityBounds;
-        std::unordered_map<ecs::Entity, collision_geometry::Polygon> entityPolygons;
+
+        struct ShapeData {
+            ecs::Entity entity;
+            sf::FloatRect bounds;
+            const components::CollisionShape* shape;
+        };
+        std::vector<ShapeData> shapes;
+        std::unordered_map<ecs::Entity, std::size_t> shapeIndices;
         entityManager.view<
             components::CollisionShape, components::BoundingBox, components::Transform>()
-            .each([&polygonEntities, &polygons, &entityBounds, &entityPolygons](
+            .each([&shapes, &shapeIndices](
                 const ecs::Entity entity,
                 const components::CollisionShape& shape,
                 const components::BoundingBox& boundingBox,
-                const components::Transform& transform) {
-                polygonEntities.push_back(entity);
-                auto polygon = collision_geometry::transformPolygon(
-                    shape.vertices, transform.getTransform());
-                polygons.push_back(polygon);
-                entityBounds.emplace(entity, boundingBox.bounds);
-                entityPolygons.emplace(entity, std::move(polygon));
+                const components::Transform&) {
+                shapeIndices.emplace(entity, shapes.size());
+                shapes.push_back({entity, boundingBox.bounds, &shape});
             });
 
-        const auto deviceTriangulations =
-            world.getCollisionDetector().triangulate(polygons);
-        std::unordered_map<ecs::Entity, std::vector<collision_geometry::Polygon>> shapes;
-        for (std::size_t polygonIndex = 0;
-             polygonIndex < polygonEntities.size(); ++polygonIndex) {
-            std::vector<collision_geometry::Polygon> triangles;
-            if (deviceTriangulations &&
-                !(*deviceTriangulations)[polygonIndex].empty()) {
-                triangles.reserve((*deviceTriangulations)[polygonIndex].size());
-                for (const auto& triangle : (*deviceTriangulations)[polygonIndex]) {
-                    triangles.emplace_back(triangle.begin(), triangle.end());
-                }
-            } else if (polygons[polygonIndex].size() >= 3) {
-                triangles = collision_geometry::triangulate(polygons[polygonIndex]);
-            }
-            shapes.emplace(polygonEntities[polygonIndex], std::move(triangles));
-        }
-
-        std::vector<std::pair<ecs::Entity, ecs::Entity> > candidatePairs;
-        for (const auto& [entity, bounds] : entityBounds) {
-            if (shapes.at(entity).empty()) {
+        std::vector<std::pair<ecs::Entity, ecs::Entity>> candidatePairs;
+        for (const auto& shape : shapes) {
+            if (shape.shape->getTriangles().empty()) {
                 continue;
             }
-            for (const auto candidate: quadtree.queryPotential(bounds)) {
-                if (candidate == entity || !shapes.contains(candidate) ||
-                    shapes.at(candidate).empty()) {
+            for (const auto candidate : quadtree.queryPotential(shape.bounds)) {
+                const auto candidateIndex = shapeIndices.find(candidate);
+                if (candidate == shape.entity || candidateIndex == shapeIndices.end() ||
+                    shapes[candidateIndex->second].shape->getTriangles().empty()) {
                     continue;
                 }
                 candidatePairs.emplace_back(
-                    std::min(entity, candidate), std::max(entity, candidate));
+                    std::min(shape.entity, candidate), std::max(shape.entity, candidate));
             }
         }
         std::ranges::sort(candidatePairs);
-        candidatePairs.erase(std::ranges::unique(candidatePairs).begin(),
-                             candidatePairs.end());
+        candidatePairs.erase(
+            std::ranges::unique(candidatePairs).begin(), candidatePairs.end());
 
-        std::vector<std::optional<collision_geometry::Contact>> contacts(candidatePairs.size());
         std::vector<SatTrianglePair> trianglePairs;
         std::vector<std::size_t> trianglePairOwners;
+        std::vector<std::vector<components::CollisionShape::Triangle>>
+            transformedTriangles(shapes.size());
+
+        //function for transforming
+        const auto transformShape = [&](const std::size_t shapeIndex) {
+            const auto& shape = shapes[shapeIndex];
+            const auto& transform =
+                entityManager.getComponent<components::Transform>(shape.entity).getTransform();
+            auto& transformed = transformedTriangles[shapeIndex];
+            transformed.reserve(shape.shape->getTriangles().size());
+            for (const auto& triangle : shape.shape->getTriangles()) {
+                components::CollisionShape::Triangle worldTriangle;
+                for (std::size_t vertex = 0; vertex < 3; ++vertex) {
+                    worldTriangle[vertex] = transform.transformPoint(triangle[vertex]);
+                }
+                transformed.push_back(worldTriangle);
+            }
+        };
+
+        //transforming all triangles
+        for (std::size_t shapeIndex = 0; shapeIndex < shapes.size(); ++shapeIndex) {
+            transformShape(shapeIndex);
+        }
+
+        //making triangle pairs
         for (std::size_t pairIndex = 0; pairIndex < candidatePairs.size(); ++pairIndex) {
             const auto [first, second] = candidatePairs[pairIndex];
-            const auto& firstPolygon = entityPolygons.at(first);
-            const auto& secondPolygon = entityPolygons.at(second);
-            if (collision_geometry::isConvex(firstPolygon) &&
-                collision_geometry::isConvex(secondPolygon)) {
-                contacts[pairIndex] = collision_geometry::intersectConvex(
-                    firstPolygon, secondPolygon);
-                continue;
-            }
+            const auto firstShapeIndex = shapeIndices.at(first);
+            const auto secondShapeIndex = shapeIndices.at(second);
 
-            const auto& firstTriangles = shapes.at(first);
-            const auto& secondTriangles = shapes.at(second);
-            for (const auto& firstTriangle : firstTriangles) {
-                for (const auto& secondTriangle : secondTriangles) {
-                    trianglePairs.push_back({
-                        .first = {
-                            firstTriangle[0], firstTriangle[1], firstTriangle[2]
-                        },
-                        .second = {
-                            secondTriangle[0], secondTriangle[1], secondTriangle[2]
-                        }
-                    });
+            for (const auto& firstTriangle : transformedTriangles[firstShapeIndex]) {
+                for (const auto& secondTriangle : transformedTriangles[secondShapeIndex]) {
+                    trianglePairs.push_back({firstTriangle, secondTriangle});
                     trianglePairOwners.push_back(pairIndex);
                 }
             }
         }
+
+        //looking for best contacts from triangles
         const auto openCLContacts = world.getCollisionDetector().detect(trianglePairs);
-        //const auto openCLContacts = world.getCollisionDetector().detect(trianglePairs);
+        std::vector<std::optional<collision_geometry::Contact>> contacts(candidatePairs.size());
         for (std::size_t index = 0; index < trianglePairs.size(); ++index) {
             std::optional<collision_geometry::Contact> contact;
             if (openCLContacts) {
@@ -114,12 +109,7 @@ namespace ms::systems {
                 }
             } else {
                 const auto& pair = trianglePairs[index];
-                const collision_geometry::Polygon firstTriangle(
-                    pair.first.begin(), pair.first.end());
-                const collision_geometry::Polygon secondTriangle(
-                    pair.second.begin(), pair.second.end());
-                contact = collision_geometry::intersectConvex(
-                    firstTriangle, secondTriangle);
+                contact = collision_geometry::intersectConvex(pair.first, pair.second);
             }
             auto& bestContact = contacts[trianglePairOwners[index]];
             if (contact && (!bestContact ||
@@ -128,13 +118,12 @@ namespace ms::systems {
             }
         }
 
-        collisions.clear();
+        //resolving the collision
         for (std::size_t index = 0; index < candidatePairs.size(); ++index) {
             if (!contacts[index]) {
                 continue;
             }
             const auto [first, second] = candidatePairs[index];
-            collisions.emplace_back(first, second);
             eventDispatcher.push(Event::CollisionDetected{
                 .first = first,
                 .second = second,
