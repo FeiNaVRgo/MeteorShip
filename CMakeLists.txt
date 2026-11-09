@@ -23,12 +23,13 @@ find_package(pybind11 CONFIG REQUIRED)
 find_package(OpenCL REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE pybind11::embed)
 pybind11_add_module(CPPModule ${PROJECT_SOURCES})
+target_include_directories(CPPModule PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_link_libraries(CPPModule PRIVATE OpenCL::OpenCL)
+target_link_libraries(${PROJECT_NAME} PRIVATE OpenCL::OpenCL)
 
 find_package(glad CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glad::glad)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE OpenCL::OpenCL)
 
 find_package(SFML COMPONENTS Network Graphics Window Audio System CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE SFML::Network SFML::Graphics SFML::Window SFML::Audio SFML::System)

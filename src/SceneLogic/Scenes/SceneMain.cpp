@@ -12,7 +12,10 @@
 #include <boost/json.hpp>
 
 #include "BTNodes/BTreeCreation.h"
+#include "Components/BoundingBox.h"
+#include "Components/CollisionShape.h"
 #include "Components/Enemy.h"
+#include "Components/Hitbox.h"
 #include "Components/Player.h"
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
@@ -21,6 +24,8 @@
 #include "Systems/Behavior/BehaviorSystem.h"
 #include "Systems/Physics/CollisionSystem.h"
 #include "Systems/Physics/CollisionResponseSystem.h"
+#include "Systems/Physics/HitSystem.h"
+#include "Systems/Physics/HitResponseSystem.h"
 #include "Systems/Physics/MovementSystem.h"
 #include "Systems/Projectiles/ProjectileSystem.h"
 #include "Systems/Player/PlayerSystem.h"
@@ -70,6 +75,8 @@ namespace ms::scene_logic::scenes {
         world->registerSystem<systems::SpatialHash>();
         world->registerSystem<systems::CollisionSystem>();
         world->registerSystem<systems::CollisionResponseSystem>(game.getEventHandler());
+        world->registerSystem<systems::HitSystem>();
+        world->registerSystem<systems::HitResponseSystem>(game.getEventHandler());
         world->registerSystem<systems::TurretSystem>(inventory);
         world->registerSystem<systems::DrawingSystem>();
 
@@ -117,6 +124,9 @@ namespace ms::scene_logic::scenes {
     void SceneMain::update(float elapsedTime) {
         world->getQuadtree().draw(game.getMainWindow());
         world->getECS().update(elapsedTime);
+        while (const auto event = world->getEventDispatcher().poll()) {
+            game.getEventHandler().handleEvent(event);
+        }
     }
     void SceneMain::createPlayer() {
         auto const player = world->getECS().createEntity();
@@ -135,10 +145,44 @@ namespace ms::scene_logic::scenes {
         world->getECS().addComponent<components::Drawable>(player, drawable);
         components::Rigidbody rigidbody{};
         auto rect = drawable.sprite.value().sprite.getLocalBounds();
-        rigidbody.bounds = utility::centeredRect(transform.getPosition(), rect.size);
+        const auto halfSize = rect.size / 2.f;
+        const sf::FloatRect localBounds(-halfSize, rect.size);
+        auto& boundingBox = world->getECS().addComponent<components::BoundingBox>(
+            player, components::BoundingBox{
+                utility::centeredRect(transform.getPosition(), rect.size)});
+        world->getECS().addComponent<components::CollisionShape>(
+            player, components::CollisionShape{{
+                {0.f, -halfSize.y},
+                {2.f, -15.f},
+                {3.f, -5.f},
+                {5.f, -4.f},
+                {6.f, -2.f},
+                {7.f, 0.f},
+                {9.f, 2.f},
+                {11.f, 4.f},
+                {13.f, 6.f},
+                {14.f, 7.f},
+                {14.f, 14.f},
+                {8.f, 15.f},
+                {4.f, halfSize.y},
+                {-4.f, halfSize.y},
+                {-8.f, 15.f},
+                {-14.f, 14.f},
+                {-14.f, 7.f},
+                {-13.f, 6.f},
+                {-11.f, 4.f},
+                {-9.f, 2.f},
+                {-7.f, 0.f},
+                {-6.f, -2.f},
+                {-5.f, -4.f},
+                {-3.f, -5.f},
+                {-2.f, -15.f}
+            }});
+        world->getECS().addComponent<components::Hitbox>(
+            player, components::Hitbox{{localBounds}});
         world->getECS().addComponent<components::Rigidbody>(player, rigidbody);
 
-        world->getQuadtree().insert(player, rigidbody.bounds);
+        world->getQuadtree().insert(player, boundingBox.bounds);
     }
 
     void SceneMain::createEnemy() {
@@ -149,7 +193,9 @@ namespace ms::scene_logic::scenes {
 
         components::Transform transform{};
         transform.setRotation(sf::degrees(0));
-        transform.setPosition(sf::Vector2f(game.getMainWindow().getSize().x / 2.f, game.getMainWindow().getSize().y / 2.f));
+        const auto windowSize = game.getMainWindow().getSize();
+        transform.setPosition(sf::Vector2f(
+            windowSize.x * 0.75f, windowSize.y / 2.f));
         world->getECS().addComponent<components::Transform>(enemy, transform);
 
         components::Drawable drawable{};
@@ -158,10 +204,44 @@ namespace ms::scene_logic::scenes {
 
         components::Rigidbody rigidbody{};
         auto rect = drawable.sprite.value().sprite.getLocalBounds();
-        rigidbody.bounds = utility::centeredRect(transform.getPosition(), rect.size);
+        const auto halfSize = rect.size / 2.f;
+        const sf::FloatRect localBounds(-halfSize, rect.size);
+        auto& boundingBox = world->getECS().addComponent<components::BoundingBox>(
+            enemy, components::BoundingBox{
+                utility::centeredRect(transform.getPosition(), rect.size)});
+        world->getECS().addComponent<components::CollisionShape>(
+            enemy, components::CollisionShape{{
+                {0.f, -halfSize.y},
+                {2.f, -15.f},
+                {3.f, -5.f},
+                {5.f, -4.f},
+                {6.f, -2.f},
+                {7.f, 0.f},
+                {9.f, 2.f},
+                {11.f, 4.f},
+                {13.f, 6.f},
+                {14.f, 7.f},
+                {14.f, 14.f},
+                {8.f, 15.f},
+                {4.f, halfSize.y},
+                {-4.f, halfSize.y},
+                {-8.f, 15.f},
+                {-14.f, 14.f},
+                {-14.f, 7.f},
+                {-13.f, 6.f},
+                {-11.f, 4.f},
+                {-9.f, 2.f},
+                {-7.f, 0.f},
+                {-6.f, -2.f},
+                {-5.f, -4.f},
+                {-3.f, -5.f},
+                {-2.f, -15.f}
+            }});
+        world->getECS().addComponent<components::Hitbox>(
+            enemy, components::Hitbox{{localBounds}});
         world->getECS().addComponent<components::Rigidbody>(enemy, rigidbody);
 
-        world->getQuadtree().insert(enemy, rigidbody.bounds);
+        world->getQuadtree().insert(enemy, boundingBox.bounds);
 
 
     }

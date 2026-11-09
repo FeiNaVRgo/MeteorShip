@@ -7,6 +7,7 @@
 #include "sfml_bindings.h"
 
 #include "Components/Transform.h"
+#include "Components/BoundingBox.h"
 #include "Components/Rigidbody.h"
 
 namespace py = pybind11;
@@ -32,8 +33,11 @@ void bind_components(py::module_& m) {
     py::class_<Rigidbody, py::smart_holder>(m, "Rigidbody")
         .def(py::init<>())
         .def_readwrite("velocity", &Rigidbody::velocity)
-        .def_readwrite("acceleration", &Rigidbody::acceleration)
-        .def_readwrite("bounds", &Rigidbody::bounds);
+        .def_readwrite("acceleration", &Rigidbody::acceleration);
+
+    py::class_<BoundingBox, py::smart_holder>(m, "BoundingBox")
+        .def(py::init<>())
+        .def_readwrite("bounds", &BoundingBox::bounds);
 }
 
 PYBIND11_EMBEDDED_MODULE(CPPModule, m) {

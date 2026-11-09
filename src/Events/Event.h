@@ -6,6 +6,7 @@
 #define METEORSHIP_EVENT_H
 
 #include <variant>
+#include <SFML/System/Vector2.hpp>
 #include "ECS/ECS.h"
 
 namespace ms {
@@ -18,9 +19,17 @@ namespace ms {
         struct CollisionDetected {
             ecs::Entity first;
             ecs::Entity second;
+            sf::Vector2f normal;
+            float penetration;
         };
 
-        using events_t = std::variant<RemoveEntity, CollisionDetected>;
+        struct HitDetected {
+            ecs::Entity first;
+            ecs::Entity second;
+            sf::Vector2f normal;
+        };
+
+        using events_t = std::variant<RemoveEntity, CollisionDetected, HitDetected>;
         events_t event_data;
 
         template<typename TEventSubVariant> //I probably should check if the data type is in variant

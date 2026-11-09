@@ -2,36 +2,42 @@
 #define METEORSHIP_OPENCLCOLLISIONDETECTOR_H
 
 #include <array>
-#include <cstdint>
 #include <memory>
 #include <optional>
-#include <string>
 #include <vector>
 
+#include <SFML/System/Vector2.hpp>
+
 namespace ms::systems {
+    struct SatTrianglePair {
+        std::array<sf::Vector2f, 3> first;
+        std::array<sf::Vector2f, 3> second;
+    };
+
+    struct SatContact {
+        bool intersects{};
+        sf::Vector2f normal{};
+        float penetration{};
+    };
+
+    using SatTriangle = std::array<sf::Vector2f, 3>;
+
     class OpenCLCollisionDetector {
         class Impl;
-
         std::unique_ptr<Impl> impl;
-        std::vector<std::string> options;
-        int selectedOption{};
 
     public:
         OpenCLCollisionDetector();
-
         ~OpenCLCollisionDetector();
 
-        OpenCLCollisionDetector(const OpenCLCollisionDetector &) = delete;
+        OpenCLCollisionDetector(const OpenCLCollisionDetector&) = delete;
+        OpenCLCollisionDetector& operator=(const OpenCLCollisionDetector&) = delete;
 
-        OpenCLCollisionDetector &operator=(const OpenCLCollisionDetector &) = delete;
+        [[nodiscard]] std::optional<std::vector<SatContact>> detect(
+            const std::vector<SatTrianglePair>& trianglePairs);
 
-        [[nodiscard]] const std::vector<std::string> &getOptions() const { return options; }
-        [[nodiscard]] int getSelectedOption() const { return selectedOption; }
-
-        void selectOption(int option);
-
-        [[nodiscard]] std::optional<std::vector<std::uint8_t> > detect(
-            const std::vector<std::array<float, 4> > &boxes, std::size_t pairCount);
+        [[nodiscard]] std::optional<std::vector<std::vector<SatTriangle>>> triangulate(
+            const std::vector<std::vector<sf::Vector2f>>& polygons);
     };
 }
 

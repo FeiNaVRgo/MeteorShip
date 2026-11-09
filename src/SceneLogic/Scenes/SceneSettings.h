@@ -9,8 +9,6 @@
 
 namespace ms::scene_logic::scenes {
     class SceneSettings : public SceneBase {
-        ui::UINode* gpuDeviceDropdown{};
-
     public:
         explicit SceneSettings(Game &game, const std::string &name);
 

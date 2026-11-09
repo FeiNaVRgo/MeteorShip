@@ -3,7 +3,9 @@
 #include <cmath>
 
 #include "Components/Damage.h"
+#include "Components/BoundingBox.h"
 #include "Components/Drawable.h"
+#include "Components/Hitbox.h"
 #include "Components/Projectile.h"
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
@@ -63,7 +65,12 @@ namespace ms::systems {
             ecs.addComponent<components::Drawable>(entity, std::move(drawable));
         }
 
-        rigidbody.bounds = utility::centeredRect(origin, boundsSize);
+        const auto halfSize = boundsSize / 2.f;
+        ecs.addComponent<components::BoundingBox>(
+            entity, components::BoundingBox{utility::centeredRect(origin, boundsSize)});
+        ecs.addComponent<components::Hitbox>(
+            entity,
+            components::Hitbox{{sf::FloatRect(-halfSize, boundsSize)}});
 
         auto& damage = ecs.addComponent<components::DamageAmount>(entity);
         damage.type = components::DamageType::Projectile;

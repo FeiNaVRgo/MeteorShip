@@ -9,7 +9,6 @@
 #include "Components/Transform.h"
 #include "ECS/ECS.h"
 #include "ECS/World.h"
-#include "Utility/UtiFuncs.h"
 
 namespace ms::systems {
     class MovementSystem : public ecs::System {
@@ -17,15 +16,12 @@ namespace ms::systems {
         void update(float deltaTime) override {
             getWorld().getECS().view<components::Rigidbody, components::Transform>()
                 .each(
-                    [deltaTime](ecs::Entity const& entity,
+                    [deltaTime](ecs::Entity const&,
                                 components::Rigidbody& rigidbody,
                                 components::Transform& transform)
                     {
                         rigidbody.velocity += rigidbody.acceleration * deltaTime;
                         transform.move(rigidbody.velocity * deltaTime);
-                        
-                        rigidbody.bounds = utility::centeredRect(
-                            transform.getPosition(), rigidbody.bounds.size);
                     }
             );
         }

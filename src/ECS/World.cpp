@@ -3,6 +3,7 @@
 //
 #include "World.h"
 #include "Game.h"
+#include "Systems/Physics/OpenCLCollisionDetector.h"
 
 namespace ms {
     World::World(Game& game)

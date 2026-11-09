@@ -29,15 +29,17 @@
 #include "BTNodes/RandomMovement.h"
 #include "BTNodes/RotateTowards.h"
 #include "Components/BehaviorTree.h"
+#include "Components/BoundingBox.h"
+#include "Components/CollisionShape.h"
 #include "Components/Drawable.h"
 #include "Components/Enemy.h"
+#include "Components/Hitbox.h"
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
 #include "Components/Player.h"
 #include "Events/EventDispatcher.h"
 #include "SceneLogic/Scenes/SceneMainMenu.h"
 #include "SceneLogic/Scenes/SceneSettings.h"
-#include "Systems/SpatialHashing/Quadtree.h"
 
 namespace py = pybind11;
 
@@ -67,7 +69,7 @@ namespace ms
         globalBlackboard->set("game_ptr", this);
 
         //mainWindow.setFramerateLimit(60);
-        mainWindow.setVerticalSyncEnabled(true);
+        //mainWindow.setVerticalSyncEnabled(true);
         auto b = mainWindow.setActive(true);
 
         //necessary for nuklear ui to work
@@ -88,6 +90,9 @@ namespace ms
         sceneManager.addScene<scene_logic::scenes::SceneSettings>(*this, "settings");
 
         worldBox.registerComponent<components::Rigidbody>();
+        worldBox.registerComponent<components::BoundingBox>();
+        worldBox.registerComponent<components::CollisionShape>();
+        worldBox.registerComponent<components::Hitbox>();
         worldBox.registerComponent<components::Transform>();
         worldBox.registerComponent<components::Drawable>();
         worldBox.registerComponent<components::Player>();

@@ -1,114 +1,21 @@
 #include "CollisionResponseSystem.h"
 
-#include "Components/Enemy.h"
+#include <cmath>
+#include <optional>
+
+#include "Components/CollisionShape.h"
 #include "Components/Player.h"
-#include "Components/Projectile.h"
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
 #include "ECS/World.h"
 #include "Events/EventSignalFactory.h"
-#include "Systems/Projectiles/ProjectileSpawner.h"
+#include "Systems/Physics/CollisionGeometry.h"
 
 namespace ms::systems {
-    namespace {
-        bool sameFaction(ecs::ECS& ecs, const ecs::Entity first, const ecs::Entity second) {
-            return (ecs.hasComponent<components::Player>(first) &&
-                    ecs.hasComponent<components::Player>(second)) ||
-                   (ecs.hasComponent<components::Enemy>(first) &&
-                    ecs.hasComponent<components::Enemy>(second));
-        }
-
-        bool canProjectileHit(
-            ecs::ECS& ecs,
-            const components::Projectile& projectile,
-            const ecs::Entity targetEntity) {
-            const bool ownerAlive = ecs.isEntityAlive(projectile.owner);
-            if (ownerAlive && targetEntity == projectile.owner) {
-                return false;
-            }
-            if (projectile.friendlyFire || !ownerAlive) {
-                return true;
-            }
-
-            return !sameFaction(ecs, projectile.owner, targetEntity);
-        }
-
-        sf::Vector2f projectileHitNormal(
-            const sf::FloatRect& projectileBounds,
-            const sf::FloatRect& targetBounds) {
-            const auto overlap = projectileBounds.findIntersection(targetBounds);
-            if (!overlap) {
-                return {};
-            }
-
-            const float projectileCenterX =
-                projectileBounds.position.x + projectileBounds.size.x / 2.f;
-            const float targetCenterX =
-                targetBounds.position.x + targetBounds.size.x / 2.f;
-            const float projectileCenterY =
-                projectileBounds.position.y + projectileBounds.size.y / 2.f;
-            const float targetCenterY =
-                targetBounds.position.y + targetBounds.size.y / 2.f;
-
-            if (overlap->size.x < overlap->size.y) {
-                return {projectileCenterX < targetCenterX ? -1.f : 1.f, 0.f};
-            }
-            return {0.f, projectileCenterY < targetCenterY ? -1.f : 1.f};
-        }
-
-        void handleProjectileHit(
-            ecs::ECS& ecs,
-            const ecs::Entity projectileEntity,
-            const ecs::Entity targetEntity,
-            const sf::Vector2f hitNormal) {
-            auto& projectile = ecs.getComponent<components::Projectile>(projectileEntity);
-            if (projectile.penetrating && !projectile.piercing &&
-                !projectile.hitEntities.insert(targetEntity).second) {
-                return;
-            }
-
-            const auto modifierHooks = projectile.modifierHooks;
-            const bool survivesHit = projectile.piercing || projectile.penetrating;
-            const auto triggerType = projectile.triggerType;
-            inventory::ModifierContext context{
-                .entityManager = ecs,
-                .projectileEntity = projectileEntity,
-                .targetEntity = targetEntity,
-                .hitNormal = hitNormal,
-                .deltaTime = 0.f
-            };
-            const bool hitTrigger = triggerType == inventory::TriggerType::Collision ||
-                triggerType == inventory::TriggerType::Timer;
-            if (hitTrigger) {
-                releaseProjectilePayload(ecs, projectileEntity);
-            }
-
-            for (const auto& hook : modifierHooks) {
-                if (hook.onCollision) {
-                    hook.onCollision(context);
-                }
-            }
-
-            if (survivesHit || !ecs.isEntityAlive(projectileEntity) ||
-                !ecs.hasComponent<components::Projectile>(projectileEntity)) {
-                return;
-            }
-
-            for (const auto& hook : modifierHooks) {
-                if (hook.onDeath) {
-                    hook.onDeath(context);
-                }
-            }
-            if (ecs.isEntityAlive(projectileEntity)) {
-                ecs.destroyEntity(projectileEntity);
-            }
-        }
-    }
-
     CollisionResponseSystem::CollisionResponseSystem(utility::EventHandling& eventHandler) {
         collisionDetectedConn = utility::EventSignalFactory::createEventSignal<Event::CollisionDetected>(
             eventHandler,
-            [this](const Event::CollisionDetected& event) { handleCollisionDetected(event); });//still contained in one scene, all systems regarding collisions are in main scene
+            [this](const Event::CollisionDetected& event) { handleCollisionDetected(event); });
     }
 
     void CollisionResponseSystem::handleCollisionDetected(const Event::CollisionDetected& event) {
@@ -116,72 +23,90 @@ namespace ms::systems {
         const auto first = event.first;
         const auto second = event.second;
         if (!ecs.isEntityAlive(first) || !ecs.isEntityAlive(second) ||
-            !ecs.hasComponent<components::Rigidbody>(first) ||
-            !ecs.hasComponent<components::Rigidbody>(second) ||
             !ecs.hasComponent<components::Transform>(first) ||
-            !ecs.hasComponent<components::Transform>(second)) {
+            !ecs.hasComponent<components::Transform>(second) ||
+            !ecs.hasComponent<components::CollisionShape>(first) ||
+            !ecs.hasComponent<components::CollisionShape>(second)) {
             return;
         }
 
-        auto& firstBody = ecs.getComponent<components::Rigidbody>(first);
-        auto& secondBody = ecs.getComponent<components::Rigidbody>(second);
-        const auto overlap = firstBody.bounds.findIntersection(secondBody.bounds);
-        if (!overlap) {
-            return;
-        }
-
-        const bool firstIsProjectile = ecs.hasComponent<components::Projectile>(first);
-        const bool secondIsProjectile = ecs.hasComponent<components::Projectile>(second);
-        if (firstIsProjectile || secondIsProjectile) {
-            if (firstIsProjectile && secondIsProjectile) {
-                return;
-            }
-
-            const auto projectileEntity = firstIsProjectile ? first : second;
-            const auto targetEntity = firstIsProjectile ? second : first;
-            const auto& projectile = ecs.getComponent<components::Projectile>(projectileEntity);
-            if (!canProjectileHit(ecs, projectile, targetEntity)) {
-                return;
-            }
-
-            const auto hitNormal = projectileHitNormal(
-                ecs.getComponent<components::Rigidbody>(projectileEntity).bounds,
-                ecs.getComponent<components::Rigidbody>(targetEntity).bounds);
-            handleProjectileHit(ecs, projectileEntity, targetEntity, hitNormal);
-            return;
-        }
-
-        sf::Vector2f firstCorrection{};
-        if (overlap->size.x < overlap->size.y) {
-            const float firstCenter = firstBody.bounds.position.x + firstBody.bounds.size.x / 2.f;
-            const float secondCenter = secondBody.bounds.position.x + secondBody.bounds.size.x / 2.f;
-            const float direction = firstCenter == secondCenter
-                                        ? (first < second ? -1.f : 1.f)
-                                        : (firstCenter < secondCenter ? -1.f : 1.f);
-            firstCorrection.x = direction * overlap->size.x / 2.f;
+        const auto polygonFor = [&ecs](const ecs::Entity entity) {
+            const auto& shape = ecs.getComponent<components::CollisionShape>(entity);
+            const auto& transform = ecs.getComponent<components::Transform>(entity);
+            return collision_geometry::transformPolygon(
+                shape.vertices, transform.getTransform());
+        };
+        const auto firstPolygon = polygonFor(first);
+        const auto secondPolygon = polygonFor(second);
+        std::optional<collision_geometry::Contact> contact;
+        if (collision_geometry::isConvex(firstPolygon) &&
+            collision_geometry::isConvex(secondPolygon)) {
+            contact = collision_geometry::intersectConvex(firstPolygon, secondPolygon);
         } else {
-            const float firstCenter = firstBody.bounds.position.y + firstBody.bounds.size.y / 2.f;
-            const float secondCenter = secondBody.bounds.position.y + secondBody.bounds.size.y / 2.f;
-            const float direction = firstCenter == secondCenter
-                                        ? (first < second ? -1.f : 1.f)
-                                        : (firstCenter < secondCenter ? -1.f : 1.f);
-            firstCorrection.y = direction * overlap->size.y / 2.f;
+            contact = collision_geometry::intersect(
+                collision_geometry::triangulate(firstPolygon),
+                collision_geometry::triangulate(secondPolygon));
+        }
+        if (!contact || !std::isfinite(contact->penetration) ||
+            contact->penetration <= 0.f ||
+            !std::isfinite(contact->normal.x) ||
+            !std::isfinite(contact->normal.y)) {
+            return;
         }
 
-        const sf::Vector2f secondCorrection = -firstCorrection;
+        const bool firstHasBody = ecs.hasComponent<components::Rigidbody>(first);
+        const bool secondHasBody = ecs.hasComponent<components::Rigidbody>(second);
+        const bool firstIsPlayer = ecs.hasComponent<components::Player>(first);
+        const bool secondIsPlayer = ecs.hasComponent<components::Player>(second);
+        if (firstHasBody && firstIsPlayer) {
+            ecs.getComponent<components::Rigidbody>(first).velocity = {};
+        }
+        if (secondHasBody && secondIsPlayer) {
+            ecs.getComponent<components::Rigidbody>(second).velocity = {};
+        }
+
+        const float firstInverseMass = firstHasBody && !firstIsPlayer ? 1.f : 0.f;
+        const float secondInverseMass = secondHasBody && !secondIsPlayer ? 1.f : 0.f;
+        const float inverseMassSum = firstInverseMass + secondInverseMass;
+        if (inverseMassSum == 0.f) {
+            return;
+        }
+
+        const float normalLengthSquared =
+            contact->normal.x * contact->normal.x +
+            contact->normal.y * contact->normal.y;
+        if (normalLengthSquared <= 1e-12f) {
+            return;
+        }
+        const auto normal = contact->normal / std::sqrt(normalLengthSquared);
+        const auto correction = normal * (contact->penetration / inverseMassSum);
+        const auto firstCorrection = -correction * firstInverseMass;
+        const auto secondCorrection = correction * secondInverseMass;
         ecs.getComponent<components::Transform>(first).move(firstCorrection);
         ecs.getComponent<components::Transform>(second).move(secondCorrection);
-        firstBody.bounds.position += firstCorrection;
-        secondBody.bounds.position += secondCorrection;
 
-        const auto removeNormalVelocity = [](components::Rigidbody& body, sf::Vector2f correction) {
-            if (correction.x != 0.f) {
-                body.velocity.x = 0.f;
-            } else {
-                body.velocity.y = 0.f;
-            }
-        };
-        removeNormalVelocity(firstBody, firstCorrection);
-        removeNormalVelocity(secondBody, secondCorrection);
+        const auto firstVelocity = firstInverseMass > 0.f
+                                       ? ecs.getComponent<components::Rigidbody>(first).velocity
+                                       : sf::Vector2f{};
+        const auto secondVelocity = secondInverseMass > 0.f
+                                        ? ecs.getComponent<components::Rigidbody>(second).velocity
+                                        : sf::Vector2f{};
+        const auto relativeVelocity = secondVelocity - firstVelocity;
+        const float normalVelocity =
+            relativeVelocity.x * normal.x + relativeVelocity.y * normal.y;
+        if (normalVelocity >= 0.f) {
+            return;
+        }
+
+        const float impulseMagnitude = -normalVelocity / inverseMassSum;
+        const auto impulse = normal * impulseMagnitude;
+        if (firstHasBody) {
+            ecs.getComponent<components::Rigidbody>(first).velocity -=
+                impulse * firstInverseMass;
+        }
+        if (secondHasBody) {
+            ecs.getComponent<components::Rigidbody>(second).velocity +=
+                impulse * secondInverseMass;
+        }
     }
 }
