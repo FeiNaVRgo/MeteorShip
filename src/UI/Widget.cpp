@@ -65,7 +65,6 @@ void ms::ui::WidgetDrawer::operator()(widgets::InventorySlotWidget &w) const {
     } else {
         clicked = nk_button_label(ctx, w.itemName.empty() ? "+" : w.itemName.c_str());
     }
-
     ctx->style.button.border = previousBorder;
     nk_style_pop_color(ctx);
 
@@ -101,11 +100,14 @@ void ms::ui::WidgetDrawer::operator()(widgets::TurretStatusWidget &w) const {
                  1.f, nk_rgb(235, 155, 45));
 
     if (nk_input_is_mouse_hovering_rect(&ctx->input, bounds)) {
-        char tooltip[96];
-        std::snprintf(tooltip, sizeof(tooltip), "Mana: %.1f / %.1f\nRecharge: %.1f s",
-                      static_cast<double>(w.mana), static_cast<double>(w.manaMax),
+        if (nk_tooltip_begin(ctx, 180.f)) {
+            nk_layout_row_dynamic(ctx, 18.f, 1);
+            nk_labelf(ctx, NK_TEXT_LEFT, "Mana: %.1f / %.1f",
+                      static_cast<double>(w.mana), static_cast<double>(w.manaMax));
+            nk_labelf(ctx, NK_TEXT_LEFT, "Recharge: %.1f s",
                       static_cast<double>(w.rechargeRemaining));
-        nk_tooltip(ctx, tooltip);
+            nk_tooltip_end(ctx);
+        }
     }
 }
 

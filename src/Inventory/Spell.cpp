@@ -270,15 +270,22 @@ namespace ms::inventory {
         return Spell("Formation - Trifurcated", Multicast(3, SpellFormation(FormationType::TriDirectional), stats), std::move(icon));
     }
 
+    Spell SpellFactory::makePiercingModifier(std::optional<sf::Sprite> icon) {
+        ProjectileStats stats;
+        stats.Piercing = true;
+        return Spell("Piercing", ProjectileModifier({}, stats), std::move(icon));
+    }
+
     std::vector<Spell> SpellFactory::makeExampleDeck() {
         return {
             makeDamagePlus(15.f),
             makeHoming(10.f, 450.f),
-            makeSparkBoltWithTimer(),
+            makeSparkBoltWithTrigger(),
             makeFormationTriDirectional(),
             makeSparkBolt(),
             makeSparkBolt(),
-            makeSparkBolt()
+            makeSparkBolt(),
+            makePiercingModifier()
         };
     }
 

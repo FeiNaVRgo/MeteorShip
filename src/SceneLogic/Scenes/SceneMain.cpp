@@ -113,12 +113,13 @@ namespace ms::scene_logic::scenes {
             const ecs::Entity targetEntity,
             const sf::Vector2f hitNormal) {
             auto& projectile = ecs.getComponent<components::Projectile>(projectileEntity);
-            if (projectile.piercing && !projectile.hitEntities.insert(targetEntity).second) {
+            if (projectile.penetrating && !projectile.piercing &&
+                !projectile.hitEntities.insert(targetEntity).second) {
                 return;
             }
 
             const auto modifierHooks = projectile.modifierHooks;
-            const bool piercing = projectile.piercing;
+            const bool survivesHit = projectile.piercing || projectile.penetrating;
             const auto triggerType = projectile.triggerType;
             inventory::ModifierContext context{
                 .entityManager = ecs,
@@ -127,8 +128,9 @@ namespace ms::scene_logic::scenes {
                 .hitNormal = hitNormal,
                 .deltaTime = 0.f
             };
-            const bool collisionTrigger = triggerType == inventory::TriggerType::Collision;
-            if (collisionTrigger) {
+            const bool hitTrigger = triggerType == inventory::TriggerType::Collision ||
+                triggerType == inventory::TriggerType::Timer;
+            if (hitTrigger) {
                 systems::releaseProjectilePayload(ecs, projectileEntity);
             }
 
@@ -138,7 +140,7 @@ namespace ms::scene_logic::scenes {
                 }
             }
 
-            if ((!collisionTrigger && piercing) || !ecs.isEntityAlive(projectileEntity) ||
+            if (survivesHit || !ecs.isEntityAlive(projectileEntity) ||
                 !ecs.hasComponent<components::Projectile>(projectileEntity)) {
                 return;
             }
@@ -149,7 +151,7 @@ namespace ms::scene_logic::scenes {
                 }
             }
             if (ecs.isEntityAlive(projectileEntity)) {
-                ecs.destroyEntity(projectileEntity);
+                ecs.destroyEntity(projectileEntity); //shouldnt we push the even remove entity?
             }
         }
     }

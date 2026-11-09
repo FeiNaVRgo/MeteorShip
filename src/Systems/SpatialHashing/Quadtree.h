@@ -113,6 +113,7 @@ namespace ms::systems {
         Quadtree& operator=(Quadtree&&) = default;
 
         void insert(ecs::Entity const entity, sf::FloatRect const& bounds) {
+            remove(entity);
             if (!root->bounds.findIntersection(bounds).has_value()) {
                 return;
             }
@@ -121,12 +122,13 @@ namespace ms::systems {
         }
 
         void remove(ecs::Entity const entity) {
-            remove(entity, root.get());
+            if (sparse_set.has(entity)) {
+                remove(entity, root.get(), sparse_set.get(entity));
+            }
             sparse_set.remove(entity);
         }
 
         void update(ecs::Entity const entity, sf::FloatRect const& newBounds) {
-            remove(entity);
             insert(entity, newBounds);
         }
 
@@ -149,6 +151,7 @@ namespace ms::systems {
         void clear() {
             root = std::make_unique<Node>(nullptr, 0);
             root->bounds = worldBounds;
+            sparse_set.clear();
         }
 
         void draw(sf::RenderTarget& renderTarget) const {
@@ -193,40 +196,24 @@ namespace ms::systems {
             }
         }
 
-        void remove(ecs::Entity entity, Node* node) {
-            std::queue<Node*> queue;
-            std::unordered_set<Node*> nodesToCheck;
-            queue.push(node);
-
-            while (!queue.empty()) {
-                auto* current = queue.front();
-                queue.pop();
-
-                if (current->isLeaf()) {
-                    if (current->entities.has_value()) {
-                        auto it = std::ranges::remove_if(*current->entities,
-                                                         [&](const auto& ent) { return ent == entity; }).begin();
-
-                        if (it != current->entities->end()) {
-                            current->entities->erase(it, current->entities->end());
-                            if (current->parent) {
-                                nodesToCheck.insert(current->parent);
-                            }
-                        }
-                    }
-                } else {
-                    for (const auto& child : current->children) {
-                        if (sparse_set.has(entity) && child->bounds.findIntersection(sparse_set.get(entity)).has_value()) {
-                            queue.push(child.get());
-                        }
-                    }
+        void remove(
+            ecs::Entity entity,
+            Node* node,
+            const sf::FloatRect& entityBounds) {
+            if (node->isLeaf()) {
+                if (node->entities.has_value()) {
+                    std::erase(*node->entities, entity);
                 }
+                return;
             }
 
-            for (auto* n : nodesToCheck) {
-                if (canJoin(n)) {
-                    join(n);
+            for (const auto& child : node->children) {
+                if (child->bounds.findIntersection(entityBounds).has_value()) {
+                    remove(entity, child.get(), entityBounds);
                 }
+            }
+            if (canJoin(node)) {
+                join(node);
             }
         }
 
@@ -237,14 +224,14 @@ namespace ms::systems {
         static bool canJoin(Node const* node) {
             if (!node || node->isLeaf()) return false;
 
-            size_t totalEntities = 0;
+            std::unordered_set<ecs::Entity> entities;
             for (const auto& child : node->children) {
                 if (child->isLeaf() && child->entities.has_value()) {
-                    totalEntities += child->entities->size();
+                    entities.insert(child->entities->begin(), child->entities->end());
                 } else {
                     return false;
                 }
-                if (totalEntities > MAX_ENTITIES_IN_NODE) {
+                if (entities.size() > MAX_ENTITIES_IN_NODE) {
                     return false;
                 }
             }
@@ -334,17 +321,19 @@ namespace ms::systems {
 
         static void join(Node* node) {
             node->entities.emplace();
+            std::unordered_set<ecs::Entity> seen;
             for (auto& child : node->children) {
                 if (child->isLeaf() && child->entities.has_value()) {
-                    node->entities->splice(node->entities->end(), *child->entities);
+                    for (const auto entity : *child->entities) {
+                        if (seen.insert(entity).second) {
+                            node->entities->push_back(entity);
+                        }
+                    }
                     child->entities.reset();
                 }
             }
 
             node->children.clear();
-            if (canJoin(node->parent)) {
-                join(node->parent);
-            }
         }
     };
 }

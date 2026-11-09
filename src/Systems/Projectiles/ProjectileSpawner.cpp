@@ -38,6 +38,7 @@ namespace ms::systems {
         projectile.lifeTime = spellInfo.finalStats.lifeTime;
         projectile.friendlyFire = spellInfo.finalStats.friendlyFire;
         projectile.piercing = spellInfo.finalStats.Piercing;
+        projectile.penetrating = spellInfo.finalStats.Penetrating;
         projectile.triggerType = spellInfo.finalStats.triggerType;
         projectile.payloadFormation = spellInfo.payloadFormation;
         projectile.timer = spellInfo.finalStats.timerLifeTime.value_or(0.f);
@@ -96,10 +97,6 @@ namespace ms::systems {
         }
 
         auto& projectile = ecs.getComponent<components::Projectile>(projectileEntity);
-        if (projectile.triggered) {
-            return;
-        }
-        projectile.triggered = true;
 
         const auto owner = projectile.owner;
         const auto speedMultiplier = projectile.speedMultiplier;

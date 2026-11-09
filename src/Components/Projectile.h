@@ -14,7 +14,7 @@ namespace ms::components {
         float speedMultiplier = 1.f;
         bool friendlyFire = false;
         bool piercing = false;
-        bool triggered = false;
+        bool penetrating = false;
         bool pendingRemoval = false;
         inventory::TriggerType triggerType = inventory::TriggerType::None;
         inventory::SpellFormation payloadFormation;

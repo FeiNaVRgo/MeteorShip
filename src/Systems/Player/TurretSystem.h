@@ -66,6 +66,12 @@ namespace ms::systems {
 
         bool isFiring() {
             const bool mouseDown = sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
+            auto& window = getWorld().getMainWindow();
+            const auto mousePosition = sf::Mouse::getPosition(window);
+            if (mouseDown && inventory.isPointerOverInteractiveWidget({
+                    static_cast<float>(mousePosition.x), static_cast<float>(mousePosition.y)})) {
+                suppressFiringUntilRelease = true;
+            }
             suppressFiringUntilRelease |= inventory.consumeUiInteraction();
             if (!mouseDown) suppressFiringUntilRelease = false;
             return mouseDown && !suppressFiringUntilRelease;

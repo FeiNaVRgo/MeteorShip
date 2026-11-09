@@ -46,8 +46,7 @@ namespace ms::systems {
                     projectile.age += deltaTime;
                     projectile.lifeTime -= deltaTime;
                     bool timerElapsed = false;
-                    if (projectile.triggerType == inventory::TriggerType::Timer &&
-                        !projectile.triggered) {
+                    if (projectile.triggerType == inventory::TriggerType::Timer) {
                         projectile.timer -= deltaTime;
                         timerElapsed = projectile.timer <= 0.f;
                     }

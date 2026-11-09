@@ -63,6 +63,7 @@ namespace ms::inventory {
 
         struct TurretModeWidgetEntry {
             std::size_t turretIndex;
+            ui::UINode* node;
             ui::widgets::ButtonWidget* widget;
         };
 
@@ -138,6 +139,7 @@ namespace ms::inventory {
         const sf::Sprite* itemIcon(const SlotAddress& address) const;
         const std::optional<SlotAddress>& selectedAddress() const { return selectedSlot; }
         SlotClickResult clickSlot(const SlotAddress& address);
+        bool isPointerOverInteractiveWidget(sf::Vector2f position) const;
         bool consumeUiInteraction() {
             const bool pending = uiInteractionPending;
             uiInteractionPending = false;

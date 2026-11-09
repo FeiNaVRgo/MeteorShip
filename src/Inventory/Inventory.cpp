@@ -39,7 +39,7 @@ namespace ms::inventory {
             {UiModeButtonSize, UiModeButtonSize});
         node.alignToParent(ui::Alignment::TopLeft, position);
         turretModeWidgets.push_back({
-            turretIndex, node.getWidget<ui::widgets::ButtonWidget>()
+            turretIndex, &node, node.getWidget<ui::widgets::ButtonWidget>()
         });
         return node;
     }
@@ -446,5 +446,20 @@ namespace ms::inventory {
             return {SlotClickAction::Swapped, "Swapped " + sourceName + " and " + *destinationName + "."};
         }
         return {SlotClickAction::Moved, "Moved " + sourceName + "."};
+    }
+
+    bool Inventory::isPointerOverInteractiveWidget(const sf::Vector2f position) const {
+        const auto contains = [position](const ui::UINode* node) {
+            return node && position.x >= node->absPos.x && position.y >= node->absPos.y &&
+                   position.x < node->absPos.x + node->absSize.x &&
+                   position.y < node->absPos.y + node->absSize.y;
+        };
+        for (const auto& entry : slotWidgets) {
+            if (entry.widget->visible && contains(entry.node)) return true;
+        }
+        for (const auto& entry : turretModeWidgets) {
+            if (contains(entry.node)) return true;
+        }
+        return false;
     }
 }

@@ -340,6 +340,7 @@ namespace ms::inventory {
         static Spell makeFormationBehind(std::optional<sf::Sprite> icon = std::nullopt);
         static Spell makeFormationBiDirectional(std::optional<sf::Sprite> icon = std::nullopt);
         static Spell makeFormationTriDirectional(std::optional<sf::Sprite> icon = std::nullopt);
+        static Spell makePiercingModifier(std::optional<sf::Sprite> icon = std::nullopt);
 
         // Example Wand / Deck setup demonstrating Noita mechanics
         static std::vector<Spell> makeExampleDeck();
