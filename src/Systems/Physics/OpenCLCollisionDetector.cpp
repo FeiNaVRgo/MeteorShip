@@ -3,6 +3,7 @@
 
 #include "OpenCLCollisionDetector.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -10,6 +11,7 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace ms::systems {
     namespace {
@@ -35,6 +37,59 @@ namespace ms::systems {
             }
             return source;
         }
+
+        std::vector<std::pair<cl_platform_id, cl_device_id>> enumerateGpuDevices() {
+            std::vector<std::pair<cl_platform_id, cl_device_id>> devices;
+            cl_uint platformCount = 0;
+            if (clGetPlatformIDs(0, nullptr, &platformCount) != CL_SUCCESS || platformCount == 0) {
+                return devices;
+            }
+
+            std::vector<cl_platform_id> platforms(platformCount);
+            if (clGetPlatformIDs(platformCount, platforms.data(), nullptr) != CL_SUCCESS) {
+                return devices;
+            }
+
+            for (const auto platform : platforms) {
+                cl_uint deviceCount = 0;
+                const auto result =
+                    clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, nullptr, &deviceCount);
+                if (result == CL_DEVICE_NOT_FOUND || deviceCount == 0) {
+                    continue;
+                }
+                if (result != CL_SUCCESS) {
+                    continue;
+                }
+
+                std::vector<cl_device_id> platformDevices(deviceCount);
+                if (clGetDeviceIDs(
+                        platform, CL_DEVICE_TYPE_GPU, deviceCount, platformDevices.data(), nullptr)
+                    != CL_SUCCESS) {
+                    continue;
+                }
+                devices.reserve(devices.size() + platformDevices.size());
+                for (const auto device : platformDevices) {
+                    devices.emplace_back(platform, device);
+                }
+            }
+            return devices;
+        }
+
+        std::string getDeviceName(const cl_device_id device) {
+            size_t nameSize = 0;
+            if (clGetDeviceInfo(device, CL_DEVICE_NAME, 0, nullptr, &nameSize) != CL_SUCCESS || nameSize == 0) {
+                return "Unknown OpenCL device";
+            }
+
+            std::string name(nameSize, '\0');
+            if (clGetDeviceInfo(device, CL_DEVICE_NAME, nameSize, name.data(), nullptr) != CL_SUCCESS) {
+                return "Unknown OpenCL device";
+            }
+            if (!name.empty() && name.back() == '\0') {
+                name.pop_back();
+            }
+            return name;
+        }
     }
 
     class OpenCLCollisionDetector::Impl {
@@ -50,43 +105,20 @@ namespace ms::systems {
             if (context) clReleaseContext(std::exchange(context, nullptr));
         }
 
-    public:
-        Impl() {
+        void initialize(std::optional<std::size_t> preferredIndex = std::nullopt) {
+            release();
             try {
-                cl_uint platformCount = 0;
-                checkOpenCLError(
-                    clGetPlatformIDs(0, nullptr, &platformCount), "clGetPlatformIDs");
-                if (platformCount == 0) {
-                    return;
-                }
-                std::vector<cl_platform_id> platforms(platformCount);
-                checkOpenCLError(
-                    clGetPlatformIDs(platformCount, platforms.data(), nullptr),
-                    "clGetPlatformIDs");
-
-                cl_platform_id selectedPlatform{};
-                cl_device_id selectedDevice{};
-                for (const auto platform : platforms) {
-                    cl_uint deviceCount = 0;
-                    const auto result =
-                        clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, nullptr, &deviceCount);
-                    if (result == CL_DEVICE_NOT_FOUND || deviceCount == 0) {
-                        continue;
-                    }
-                    checkOpenCLError(result, "clGetDeviceIDs");
-                    std::vector<cl_device_id> devices(deviceCount);
-                    checkOpenCLError(
-                        clGetDeviceIDs(
-                            platform, CL_DEVICE_TYPE_GPU, deviceCount, devices.data(), nullptr),
-                        "clGetDeviceIDs");
-                    selectedPlatform = platform;
-                    selectedDevice = devices.front();
-                    break;
-                }
-                if (!selectedDevice) {
+                const auto gpuDevices = enumerateGpuDevices();
+                if (gpuDevices.empty()) {
                     std::clog << "No OpenCL GPU found; using CPU SAT collision detection\n";
                     return;
                 }
+
+                const auto selectedIndex = preferredIndex.has_value()
+                    ? std::clamp(*preferredIndex, std::size_t{0}, gpuDevices.size() - 1)
+                    : std::size_t{0};
+
+                const auto [selectedPlatform, selectedDevice] = gpuDevices[selectedIndex];
 
                 cl_int error = CL_SUCCESS;
                 const cl_context_properties properties[] = {
@@ -122,21 +154,35 @@ namespace ms::systems {
                 }
                 satKernel = clCreateKernel(program, "detect_sat_triangle_pairs", &error);
                 checkOpenCLError(error, "clCreateKernel(SAT)");
-                size_t nameSize = 0;
-                clGetDeviceInfo(selectedDevice, CL_DEVICE_NAME, 0, nullptr, &nameSize);
-                std::string name(nameSize, '\0');
-                clGetDeviceInfo(
-                    selectedDevice, CL_DEVICE_NAME, nameSize, name.data(), nullptr);
-                if (!name.empty() && name.back() == '\0') {
-                    name.pop_back();
-                }
-                std::clog << "OpenCL SAT collision detection using " << name << '\n';
+                std::clog << "OpenCL SAT collision detection using " << getDeviceName(selectedDevice) << '\n';
             } catch (const std::exception& error) {
                 release();
                 std::cerr << "Unable to initialize OpenCL SAT collision detection; "
                              "using CPU SAT collision detection: "
                           << error.what() << '\n';
             }
+        }
+
+    public:
+        Impl() {
+            initialize();
+        }
+
+        [[nodiscard]] std::vector<std::string> getAvailableDeviceNames() const {
+            std::vector<std::string> names;
+            for (const auto& [platform, device] : enumerateGpuDevices()) {
+                names.push_back(getDeviceName(device));
+            }
+            return names;
+        }
+
+        bool selectDevice(const std::size_t index) {
+            const auto gpuDevices = enumerateGpuDevices();
+            if (index >= gpuDevices.size()) {
+                return false;
+            }
+            initialize(index);
+            return satKernel != nullptr;
         }
 
         ~Impl() {
@@ -234,6 +280,14 @@ namespace ms::systems {
         : impl(std::make_unique<Impl>()) {}
 
     OpenCLCollisionDetector::~OpenCLCollisionDetector() = default;
+
+    std::vector<std::string> OpenCLCollisionDetector::getAvailableDeviceNames() const {
+        return impl->getAvailableDeviceNames();
+    }
+
+    bool OpenCLCollisionDetector::selectDevice(const std::size_t index) {
+        return impl->selectDevice(index);
+    }
 
     std::optional<std::vector<SatContact>> OpenCLCollisionDetector::detect(
         const std::vector<SatTrianglePair>& trianglePairs) {

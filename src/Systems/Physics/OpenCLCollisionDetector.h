@@ -31,6 +31,9 @@ namespace ms::systems {
         OpenCLCollisionDetector(const OpenCLCollisionDetector&) = delete;
         OpenCLCollisionDetector& operator=(const OpenCLCollisionDetector&) = delete;
 
+        [[nodiscard]] std::vector<std::string> getAvailableDeviceNames() const;
+        bool selectDevice(std::size_t index);
+
         [[nodiscard]] std::optional<std::vector<SatContact>> detect(
             const std::vector<SatTrianglePair>& trianglePairs);
     };
