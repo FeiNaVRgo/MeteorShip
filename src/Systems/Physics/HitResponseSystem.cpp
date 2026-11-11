@@ -112,6 +112,6 @@ namespace ms::systems {
             ecs,
             projectileEntity,
             targetEntity,
-            firstIsProjectile ? event.normal : -event.normal);
+            {});
     }
 }

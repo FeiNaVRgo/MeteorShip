@@ -59,12 +59,21 @@ namespace ms::systems {
             states.transform *= transform.getTransform();
 
             for (const auto& bounds : hitbox.rectangles) {
-                sf::RectangleShape rectangle(bounds.size);
-                rectangle.setPosition(bounds.position);
-                rectangle.setFillColor(sf::Color::Transparent);
-                rectangle.setOutlineColor(sf::Color::Magenta);
-                rectangle.setOutlineThickness(1.f);
-                target.draw(rectangle, states);
+                const auto horizontal = bounds.axes[0] * bounds.extents.x;
+                const auto vertical = bounds.axes[1] * bounds.extents.y;
+                const sf::Vector2f corners[] = {
+                    bounds.center - horizontal - vertical,
+                    bounds.center + horizontal - vertical,
+                    bounds.center + horizontal + vertical,
+                    bounds.center - horizontal + vertical,
+                    bounds.center - horizontal - vertical
+                };
+                sf::VertexArray outline(sf::PrimitiveType::LineStrip, 5);
+                for (std::size_t i = 0; i < 5; ++i) {
+                    outline[i].position = corners[i];
+                    outline[i].color = sf::Color::Magenta;
+                }
+                target.draw(outline, states);
             }
         }
 

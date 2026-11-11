@@ -84,11 +84,11 @@ namespace ms::inventory {
                                      std::optional<utility::AnimatedSprite> projSprite) {
         ProjectileStats stats;
         stats.damage = 3.f;
-        stats.speed = 800.f;
+        stats.speed = 200.f;
         stats.lifeTime = 0.8f;
         stats.castDelay = 0.05f;
         stats.rechargeTime = 0.f;
-        stats.manaDrain = 5.f;
+        stats.manaDrain = 0.f;
         stats.critChangeBonus = 5.f;
         stats.spreadModification = 1.f;
         return Spell("Spark Bolt", Projectile(stats), std::move(icon), std::move(projSprite));

@@ -26,7 +26,6 @@ namespace ms {
         struct HitDetected {
             ecs::Entity first;
             ecs::Entity second;
-            sf::Vector2f normal;
         };
 
         using events_t = std::variant<RemoveEntity, CollisionDetected, HitDetected>;

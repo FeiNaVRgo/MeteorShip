@@ -205,7 +205,6 @@ namespace ms::scene_logic::scenes {
         components::Rigidbody rigidbody{};
         auto rect = drawable.sprite.value().sprite.getLocalBounds();
         const auto halfSize = rect.size / 2.f;
-        const sf::FloatRect localBounds(-halfSize, rect.size);
         auto& boundingBox = world->getECS().addComponent<components::BoundingBox>(
             enemy, components::BoundingBox{
                 utility::centeredRect(transform.getPosition(), rect.size)});
@@ -238,7 +237,23 @@ namespace ms::scene_logic::scenes {
                 {-2.f, -15.f}
             }});
         world->getECS().addComponent<components::Hitbox>(
-            enemy, components::Hitbox{{localBounds}});
+            enemy, components::Hitbox{{
+                sf::FloatRect(
+                    {-halfSize.x * 0.25f, -halfSize.y},
+                    {halfSize.x * 0.5f, rect.size.y}),
+                sf::FloatRect(
+                    {-halfSize.x, -halfSize.y * 0.1f},
+                    {halfSize.x * 0.35f, halfSize.y * 0.35f}),
+                sf::FloatRect(
+                    {-halfSize.x, halfSize.y * 0.25f},
+                    {halfSize.x * 0.35f, halfSize.y * 0.35f}),
+                sf::FloatRect(
+                    {halfSize.x * 0.65f, -halfSize.y * 0.1f},
+                    {halfSize.x * 0.35f, halfSize.y * 0.35f}),
+                sf::FloatRect(
+                    {halfSize.x * 0.65f, halfSize.y * 0.25f},
+                    {halfSize.x * 0.35f, halfSize.y * 0.35f})
+            }});
         world->getECS().addComponent<components::Rigidbody>(enemy, rigidbody);
 
         world->getQuadtree().insert(enemy, boundingBox.bounds);

@@ -15,27 +15,21 @@ namespace ms::systems {
     void HitSystem::update(float) {
         auto& world = getWorld();
         auto& ecs = world.getECS();
-        std::unordered_map<ecs::Entity, std::vector<collision_geometry::Polygon>> hitboxes;
         std::unordered_map<ecs::Entity, sf::FloatRect> bounds;
         ecs.view<components::Hitbox, components::BoundingBox, components::Transform>()
-            .each([&hitboxes, &bounds](
-                const ecs::Entity entity,
-                const components::Hitbox& hitbox,
-                const components::BoundingBox& boundingBox,
-                const components::Transform& transform) {
-                auto& entityHitboxes = hitboxes[entity];
-                entityHitboxes.reserve(hitbox.rectangles.size());
-                for (const auto& rectangle : hitbox.rectangles) {
-                    entityHitboxes.push_back(collision_geometry::transformRectangle(
-                        rectangle, transform.getTransform()));
-                }
+            .each([&bounds](
+                ecs::Entity entity,
+                components::Hitbox& hitbox,
+                components::BoundingBox& boundingBox,
+                const components::Transform& transform)
+            {
                 bounds.emplace(entity, boundingBox.bounds);
             });
 
         std::vector<std::pair<ecs::Entity, ecs::Entity>> candidatePairs;
         for (const auto& [entity, entityBounds] : bounds) {
             for (const auto candidate : world.getQuadtree().queryPotential(entityBounds)) {
-                if (candidate == entity || !hitboxes.contains(candidate)) {
+                if (candidate == entity || !getWorld().getECS().hasComponent<components::Hitbox>(candidate)) {
                     continue;
                 }
                 candidatePairs.emplace_back(
@@ -47,24 +41,22 @@ namespace ms::systems {
             std::ranges::unique(candidatePairs).begin(), candidatePairs.end());
 
         for (const auto& [first, second] : candidatePairs) {
-            std::optional<collision_geometry::Contact> contact;
-            for (const auto& firstBox : hitboxes.at(first)) {
-                for (const auto& secondBox : hitboxes.at(second)) {
-                    contact = collision_geometry::intersectConvex(firstBox, secondBox);
-                    if (contact) {
-                        break;
-                    }
-                }
-                if (contact) {
-                    break;
+            const auto& [rectangles1] = getWorld().getECS().getComponent<components::Hitbox>(first);
+            const auto& [rectangles2] = getWorld().getECS().getComponent<components::Hitbox>(second);
+            const auto& transform1 = getWorld().getECS().getComponent<components::Transform>(first);
+            const auto& transform2 = getWorld().getECS().getComponent<components::Transform>(second);
+
+            bool collision = false;
+            for (int i = 0; i < rectangles1.size() && !collision; i++) {
+                for (int j = 0; j < rectangles2.size() && !collision; j++) {
+                    collision = collision_geometry::checkOBBIntersection2D(
+                        collision_geometry::transformOBB(rectangles1[i], transform1),
+                        collision_geometry::transformOBB(rectangles2[j], transform2));
                 }
             }
-            if (contact) {
-                world.getEventDispatcher().push(Event::HitDetected{
-                    .first = first,
-                    .second = second,
-                    .normal = contact->normal
-                });
+
+            if (collision) {
+                getWorld().getEventDispatcher().push(Event::HitDetected{.first = first, .second = second});
             }
         }
     }

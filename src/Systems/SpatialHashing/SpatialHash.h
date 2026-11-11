@@ -60,14 +60,14 @@ namespace ms::systems {
                         const auto& hitbox =
                             entityManager.getComponent<components::Hitbox>(entity);
                         for (const auto& rectangle : hitbox.rectangles) {
-                            const auto left = rectangle.position.x;
-                            const auto top = rectangle.position.y;
-                            const auto right = left + rectangle.size.x;
-                            const auto bottom = top + rectangle.size.y;
-                            transformPoint({left, top});
-                            transformPoint({right, top});
-                            transformPoint({right, bottom});
-                            transformPoint({left, bottom});
+                            for (const float xSign : {-1.f, 1.f}) {
+                                for (const float ySign : {-1.f, 1.f}) {
+                                    transformPoint(
+                                        rectangle.center +
+                                        rectangle.axes[0] * (rectangle.extents.x * xSign) +
+                                        rectangle.axes[1] * (rectangle.extents.y * ySign));
+                                }
+                            }
                         }
                     }
                     if (points.empty()) {
@@ -96,7 +96,7 @@ namespace ms::systems {
                     world.getQuadtree().update(entity, boundingBox.bounds);
                     if (!world.getQuadtree().worldBounds.findIntersection(
                             boundingBox.bounds)) {
-                        world.getEventDispatcher().push(Event(Event::RemoveEntity(entity)));
+                        world.getEventDispatcher().push(Event::RemoveEntity(entity));
                     }
                 });
         }

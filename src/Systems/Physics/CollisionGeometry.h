@@ -13,6 +13,9 @@
 #include <SFML/Graphics/Transform.hpp>
 #include <SFML/System/Vector2.hpp>
 
+#include "Components/Hitbox.h"
+#include "Components/Transform.h"
+
 namespace ms::systems::collision_geometry {
     using Polygon = std::vector<sf::Vector2f>;
 
@@ -252,6 +255,50 @@ namespace ms::systems::collision_geometry {
         const auto bottom = top + rectangle.size.y;
         return transformPolygon(
             {{left, top}, {right, top}, {right, bottom}, {left, bottom}}, transform);
+    }
+
+    inline components::OBB2D transformOBB(
+        const components::OBB2D& box,
+        const components::Transform& transform) {
+        auto obb = box;
+        obb.center = transform.getTransform().transformPoint(obb.center);
+
+        const sf::Vector2f zero = transform.getTransform().transformPoint({0.0f, 0.0f});
+        const sf::Vector2f v0 = transform.getTransform().transformPoint(obb.axes[0]) - zero;
+        const sf::Vector2f v1 = transform.getTransform().transformPoint(obb.axes[1]) - zero;
+
+        const float len0 = std::hypot(v0.x, v0.y);
+        const float len1 = std::hypot(v1.x, v1.y);
+
+        obb.extents.x *= len0;
+        obb.extents.y *= len1;
+
+        obb.axes[0] = { v0.x / len0, v0.y / len0 };
+        obb.axes[1] = { v1.x / len1, v1.y / len1 };
+        return obb;
+    }
+
+    inline bool checkOBBIntersection2D(
+        const components::OBB2D& a,
+        const components::OBB2D& b) {
+        const sf::Vector2f T = b.center - a.center;
+        const sf::Vector2f axes[4] = {a.axes[0], a.axes[1], b.axes[0], b.axes[1]};
+
+        for (const auto& L : axes) {
+            const float dist = std::abs(T.dot(L));
+
+            const float r_A = a.extents.x * std::abs(a.axes[0].dot(L)) +
+                              a.extents.y * std::abs(a.axes[1].dot(L));
+
+            const float r_B = b.extents.x * std::abs(b.axes[0].dot(L)) +
+                              b.extents.y * std::abs(b.axes[1].dot(L));
+
+            if (dist > r_A + r_B) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 
