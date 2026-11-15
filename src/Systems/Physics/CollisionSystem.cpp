@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
 
@@ -10,14 +11,39 @@
 #include "Components/Transform.h"
 #include "ECS/World.h"
 #include "Systems/Physics/CollisionGeometry.h"
+#include "Systems/Physics/CollisionResponseSystem.h"
 #include "Systems/Physics/OpenCLCollisionDetector.h"
 
 namespace ms::systems {
+    namespace {
+        struct TransformedTriangle {
+            components::CollisionShape::Triangle vertices;
+            sf::FloatRect bounds;
+        };
+
+        sf::FloatRect getBounds(
+            const components::CollisionShape::Triangle& triangle) {
+            float minX = triangle[0].x;
+            float maxX = triangle[0].x;
+            float minY = triangle[0].y;
+            float maxY = triangle[0].y;
+            for (std::size_t vertex = 1; vertex < triangle.size(); ++vertex) {
+                minX = std::min(minX, triangle[vertex].x);
+                maxX = std::max(maxX, triangle[vertex].x);
+                minY = std::min(minY, triangle[vertex].y);
+                maxY = std::max(maxY, triangle[vertex].y);
+            }
+            return {{minX, minY}, {maxX - minX, maxY - minY}};
+        }
+    }
+
     void CollisionSystem::update(float) {
         auto& world = getWorld();
         auto& entityManager = world.getECS();
         auto& quadtree = world.getQuadtree();
-        auto& eventDispatcher = world.getEventDispatcher();
+        if (!collisionResponseSystem) {
+            throw std::logic_error("CollisionSystem requires a CollisionResponseSystem");
+        }
 
         struct ShapeData {
             ecs::Entity entity;
@@ -56,9 +82,7 @@ namespace ms::systems {
         candidatePairs.erase(
             std::ranges::unique(candidatePairs).begin(), candidatePairs.end());
 
-        std::vector<SatTrianglePair> trianglePairs;
-        std::vector<std::size_t> trianglePairOwners;
-        std::vector<std::vector<components::CollisionShape::Triangle>>
+        std::vector<std::vector<TransformedTriangle>>
             transformedTriangles(shapes.size());
 
         //function for transforming
@@ -73,63 +97,65 @@ namespace ms::systems {
                 for (std::size_t vertex = 0; vertex < 3; ++vertex) {
                     worldTriangle[vertex] = transform.transformPoint(triangle[vertex]);
                 }
-                transformed.push_back(worldTriangle);
+                transformed.push_back({worldTriangle, getBounds(worldTriangle)});
             }
         };
 
-        //transforming all triangles
-        for (std::size_t shapeIndex = 0; shapeIndex < shapes.size(); ++shapeIndex) {
-            transformShape(shapeIndex);
-        }
+        constexpr std::size_t solverIterations = 8;
+        for (std::size_t iteration = 0; iteration < solverIterations; ++iteration) {
+            for (std::size_t shapeIndex = 0; shapeIndex < shapes.size(); ++shapeIndex) {
+                transformedTriangles[shapeIndex].clear();
+                transformShape(shapeIndex);
+            }
 
-        //making triangle pairs
-        for (std::size_t pairIndex = 0; pairIndex < candidatePairs.size(); ++pairIndex) {
-            const auto [first, second] = candidatePairs[pairIndex];
-            const auto firstShapeIndex = shapeIndices.at(first);
-            const auto secondShapeIndex = shapeIndices.at(second);
-
-            for (const auto& firstTriangle : transformedTriangles[firstShapeIndex]) {
-                for (const auto& secondTriangle : transformedTriangles[secondShapeIndex]) {
-                    trianglePairs.push_back({firstTriangle, secondTriangle});
-                    trianglePairOwners.push_back(pairIndex);
+            std::vector<std::optional<collision_geometry::Contact>> contacts(candidatePairs.size());
+            bool foundContact = false;
+            for (std::size_t pairIndex = 0; pairIndex < candidatePairs.size(); ++pairIndex) {
+                const auto [first, second] = candidatePairs[pairIndex];
+                const auto& firstTriangles = transformedTriangles[shapeIndices.at(first)];
+                const auto& secondTriangles = transformedTriangles[shapeIndices.at(second)];
+                for (const auto& firstTriangle : firstTriangles) {
+                    for (const auto& secondTriangle : secondTriangles) {
+                        if (!firstTriangle.bounds.findIntersection(secondTriangle.bounds)) {
+                            continue;
+                        }
+                        const auto contact = collision_geometry::intersectConvex(
+                            firstTriangle.vertices, secondTriangle.vertices);
+                        auto& bestContact = contacts[pairIndex];
+                        if (contact && (!bestContact ||
+                                        contact->penetration > bestContact->penetration)) {
+                            bestContact = contact;
+                            foundContact = true;
+                        }
+                    }
                 }
             }
-        }
 
-        //looking for best contacts from triangles
-        const auto openCLContacts = world.getCollisionDetector().detect(trianglePairs);
-        std::vector<std::optional<collision_geometry::Contact>> contacts(candidatePairs.size());
-        for (std::size_t index = 0; index < trianglePairs.size(); ++index) {
-            std::optional<collision_geometry::Contact> contact;
-            if (openCLContacts) {
-                const auto& result = (*openCLContacts)[index];
-                if (result.intersects) {
-                    contact = collision_geometry::Contact{
-                        result.normal, result.penetration};
+            if (!foundContact) {
+                break;
+            }
+
+            bool correctedPosition = false;
+            for (std::size_t index = 0; index < candidatePairs.size(); ++index) {
+                if (!contacts[index]) {
+                    continue;
                 }
-            } else {
-                const auto& pair = trianglePairs[index];
-                contact = collision_geometry::intersectConvex(pair.first, pair.second);
+                const auto [first, second] = candidatePairs[index];
+                correctedPosition |= collisionResponseSystem->resolveCollision(
+                    Event::CollisionDetected{
+                        .first = first,
+                        .second = second,
+                        .normal = contacts[index]->normal,
+                        .penetration = contacts[index]->penetration
+                    });
             }
-            auto& bestContact = contacts[trianglePairOwners[index]];
-            if (contact && (!bestContact ||
-                            contact->penetration > bestContact->penetration)) {
-                bestContact = contact;
+            if (!correctedPosition) {
+                break;
             }
         }
+    }
 
-        //resolving the collision
-        for (std::size_t index = 0; index < candidatePairs.size(); ++index) {
-            if (!contacts[index]) {
-                continue;
-            }
-            const auto [first, second] = candidatePairs[index];
-            eventDispatcher.push(Event::CollisionDetected{
-                .first = first,
-                .second = second,
-                .normal = contacts[index]->normal,
-                .penetration = contacts[index]->penetration
-            });
-        }
+    void CollisionSystem::setCollisionResponseSystem(CollisionResponseSystem *pcollisionResponseSystem) {
+        this->collisionResponseSystem = pcollisionResponseSystem;
     }
 }

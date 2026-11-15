@@ -30,7 +30,7 @@ namespace ms::scene_logic::scenes {
         }, {180.f, 52.f}).alignTo(playButton, ui::Alignment::TopCenter, ui::Alignment::BottomCenter, {0.f, 14.f});
         ui.root->add(ui::widgets::ButtonWidget{
             .text = "EXIT",
-            .onClick = [this] { this->game.getMainWindow().close(); },
+            .onClick = [this] { this->game.getMainWindow().close(); },// we need to make custom close event or something
             .style = buttonStyle
         }, {180.f, 52.f}).alignTo(settingsButton, ui::Alignment::TopCenter, ui::Alignment::BottomCenter, {0.f, 14.f});
     }

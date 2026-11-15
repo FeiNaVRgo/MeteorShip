@@ -12,6 +12,14 @@ namespace ms {
               static_cast<float>(game.getMainWindow().getSize().x),
               static_cast<float>(game.getMainWindow().getSize().y)}}) {}
 
+    Game& World::getGame() const { return game; }
+
+    ecs::ECS& World::getECS() { return ecs; }
+
+    systems::Quadtree& World::getQuadtree() { return m_quadtree; }
+
+    EventDispatcher& World::getEventDispatcher() { return eventDispatcher; }
+
     sf::RenderWindow& World::getMainWindow() const {
         return game.getMainWindow();
     }

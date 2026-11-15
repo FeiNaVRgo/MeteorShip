@@ -23,16 +23,16 @@ namespace ms {
         systems::Quadtree m_quadtree;
         EventDispatcher eventDispatcher;
     public:
-        World(Game& game);
+        explicit World(Game& game);
 
-        Game& getGame() const { return game; }
-        ecs::ECS& getECS() { return ecs; }
-        systems::Quadtree& getQuadtree() { return m_quadtree; }
-        EventDispatcher& getEventDispatcher() { return eventDispatcher; }
-        sf::RenderWindow& getMainWindow() const;
-        systems::OpenCLCollisionDetector& getCollisionDetector() const;
+        [[nodiscard]] Game& getGame() const;
+        ecs::ECS& getECS();
+        systems::Quadtree& getQuadtree();
+        EventDispatcher& getEventDispatcher();
+        [[nodiscard]] sf::RenderWindow& getMainWindow() const;
+        [[nodiscard]] systems::OpenCLCollisionDetector& getCollisionDetector() const;
 
-        void update(float deltaTime) {
+        void update(const float deltaTime) {
             ecs.update(deltaTime);
         }
 

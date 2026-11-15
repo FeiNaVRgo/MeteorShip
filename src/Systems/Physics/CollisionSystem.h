@@ -7,15 +7,22 @@
 #include "ECS/ECS.h"
 
 namespace ms::systems {
+    class CollisionResponseSystem;
+
     class CollisionSystem : public ecs::System {
-        //std::vector<std::pair<ecs::Entity, ecs::Entity> > collisions;
+        CollisionResponseSystem* collisionResponseSystem = nullptr;
 
     public:
+        explicit CollisionSystem(CollisionResponseSystem& responseSystem)
+            : collisionResponseSystem(&responseSystem) {}
+        explicit CollisionSystem()
+            : collisionResponseSystem(nullptr) {}
+
         void update(float deltaTime) override;
 
-        //[[nodiscard]] const std::vector<std::pair<ecs::Entity, ecs::Entity> > &
-        //getCollisions() const { return collisions; }
+        void setCollisionResponseSystem(CollisionResponseSystem* pcollisionResponseSystem);
     };
 }
 
 #endif //METEORSHIP_COLLISIONSYSTEM_H
+

@@ -73,8 +73,9 @@ namespace ms::scene_logic::scenes {
         world->registerSystem<systems::MovementSystem>();
         world->registerSystem<systems::BehaviorSystem>();
         world->registerSystem<systems::SpatialHash>();
-        world->registerSystem<systems::CollisionSystem>();
-        world->registerSystem<systems::CollisionResponseSystem>(game.getEventHandler());
+        auto& collisionSystem = world->registerSystem<systems::CollisionSystem>();
+        auto& collisionResponse = world->registerSystem<systems::CollisionResponseSystem>();
+        collisionSystem.setCollisionResponseSystem(&collisionResponse);
         world->registerSystem<systems::HitSystem>();
         world->registerSystem<systems::HitResponseSystem>(game.getEventHandler());
         world->registerSystem<systems::TurretSystem>(inventory);
@@ -114,7 +115,9 @@ namespace ms::scene_logic::scenes {
             game.getEventHandler(),
             [this](Event::RemoveEntity const& e) { world->getECS().destroyEntity(e.entity); });
         createPlayer();
-        createEnemy();
+        for (int i = 0; i < 50; i++) {
+            createEnemy();
+        }
     }
 
     void SceneMain::destroy() {
@@ -187,6 +190,11 @@ namespace ms::scene_logic::scenes {
 
     void SceneMain::createEnemy() {
         auto const enemy = world->getECS().createEntity();
+        std::size_t enemyIndex = 0;
+        world->getECS().view<components::Enemy>().each(
+            [&enemyIndex](const ecs::Entity, const components::Enemy&) {
+                ++enemyIndex;
+            });
 
         world->getECS().addComponent<components::Enemy>(enemy);
         world->getECS().addComponent<components::BehaviorTree>(enemy, create_tree_for_basic_enemy(game, enemy));
@@ -194,8 +202,16 @@ namespace ms::scene_logic::scenes {
         components::Transform transform{};
         transform.setRotation(sf::degrees(0));
         const auto windowSize = game.getMainWindow().getSize();
-        transform.setPosition(sf::Vector2f(
-            windowSize.x * 0.75f, windowSize.y / 2.f));
+        constexpr std::size_t spawnColumns = 8;
+        constexpr float spawnSpacing = 48.f;
+        const auto column = enemyIndex % spawnColumns;
+        const auto row = enemyIndex / spawnColumns;
+        transform.setPosition({
+            windowSize.x * 0.75f +
+                (static_cast<float>(column) - (spawnColumns - 1) / 2.f) * spawnSpacing,
+            windowSize.y / 2.f +
+                (static_cast<float>(row) - 3.f) * spawnSpacing
+        });
         world->getECS().addComponent<components::Transform>(enemy, transform);
 
         components::Drawable drawable{};

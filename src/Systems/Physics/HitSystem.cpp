@@ -26,7 +26,7 @@ namespace ms::systems {
                 bounds.emplace(entity, boundingBox.bounds);
             });
 
-        std::vector<std::pair<ecs::Entity, ecs::Entity>> candidatePairs;
+        std::vector<std::pair<ecs::Entity, ecs::Entity>> candidatePairs; //how much to reserve
         for (const auto& [entity, entityBounds] : bounds) {
             for (const auto candidate : world.getQuadtree().queryPotential(entityBounds)) {
                 if (candidate == entity || !getWorld().getECS().hasComponent<components::Hitbox>(candidate)) {
