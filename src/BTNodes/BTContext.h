@@ -14,6 +14,7 @@ namespace ms::bt_nodes {
         std::weak_ptr<World> world;
         ecs::Entity entity;
         std::optional<ecs::Entity> playerEntity;
+        float deltaTime = 0.f;
     };
 }
 

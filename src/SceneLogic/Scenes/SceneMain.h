@@ -16,6 +16,7 @@ namespace ms::scene_logic::scenes {
             inventory::DefaultSpellSlotCount,
             inventory::DefaultTurretMountCount
         };
+        float simulationAccumulator = 0.f;
 
     public:
         boost::signals2::connection removeEntityConn;

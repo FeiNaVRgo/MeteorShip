@@ -77,7 +77,7 @@ namespace ms::systems {
             }
         }
 
-        void update(float deltaTime) override {
+        void render() override {
             auto& renderWindow = getWorld().getMainWindow();
             getWorld().getECS().view<components::Transform, components::Drawable>().each(
                 [&renderWindow](ecs::Entity const& entity, components::Transform& transform, components::Drawable& drawable) {

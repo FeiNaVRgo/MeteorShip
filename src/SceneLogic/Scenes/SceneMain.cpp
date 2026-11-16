@@ -5,6 +5,7 @@
 #include "SceneMain.h"
 #include "Game.h"
 #include "Utility/UtiFuncs.h"
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <utility>
@@ -126,7 +127,14 @@ namespace ms::scene_logic::scenes {
 
     void SceneMain::update(float elapsedTime) {
         world->getQuadtree().draw(game.getMainWindow());
-        world->getECS().update(elapsedTime);
+        constexpr float fixedTimeStep = 1.f / 60.f;
+        constexpr float maximumFrameTime = 0.25f;
+        simulationAccumulator += std::min(elapsedTime, maximumFrameTime);
+        while (simulationAccumulator >= fixedTimeStep) {
+            world->getECS().update(fixedTimeStep);
+            simulationAccumulator -= fixedTimeStep;
+        }
+        world->getECS().render();
         while (const auto event = world->getEventDispatcher().poll()) {
             game.getEventHandler().handleEvent(event);
         }

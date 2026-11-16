@@ -14,7 +14,7 @@
       </Fallback>
       <MoveForward speed="30"
                    bt_context="{bt_context}"/>
-      <RotateTowards speed="1"
+      <RotateTowards speed="60"
                      bt_context="{bt_context}"/>
     </Sequence>
   </BehaviorTree>

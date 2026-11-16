@@ -27,7 +27,8 @@ namespace ms::bt_nodes {
     BT::NodeStatus RotateTowards::tick() {
         const auto btContext = getInput<BTContext>("bt_context");
         const auto speed = getInput<float>("speed");
-        if (!btContext || !speed || !std::isfinite(speed.value()) || speed.value() < 0.f) {
+        if (!btContext || !speed || !std::isfinite(speed.value()) || speed.value() < 0.f ||
+            !std::isfinite(btContext.value().deltaTime) || btContext.value().deltaTime < 0.f) {
             return BT::NodeStatus::FAILURE;
         }
 
@@ -69,7 +70,11 @@ namespace ms::bt_nodes {
         }
 
         const float difference = std::remainder(targetDegrees - currentDegrees, 360.f);
-        const float turn = std::clamp(difference, -speed.value(), speed.value());
+        const float maxTurn = speed.value() * btContext.value().deltaTime;
+        if (!std::isfinite(maxTurn)) {
+            return BT::NodeStatus::FAILURE;
+        }
+        const float turn = std::clamp(difference, -maxTurn, maxTurn);
         transform.rotate(sf::degrees(turn));
         return BT::NodeStatus::SUCCESS;
     }

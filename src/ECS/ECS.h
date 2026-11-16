@@ -383,6 +383,7 @@ namespace ms {
             }
 
             virtual void update(float deltaTime) {}
+            virtual void render() {}
         };
 
         class ECS {
@@ -451,6 +452,12 @@ namespace ms {
             void update(float const deltaTime) const {
                 for (auto& system : systems) {
                     system->update(deltaTime);
+                }
+            }
+
+            void render() const {
+                for (auto& system : systems) {
+                    system->render();
                 }
             }
 
