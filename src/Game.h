@@ -5,9 +5,13 @@
 #ifndef METEORSHIP_GAME_H
 #define METEORSHIP_GAME_H
 
+#include <memory>
+
 #include <behaviortree_cpp/blackboard.h>
 #include <behaviortree_cpp/bt_factory.h>
 #include <SFML/Graphics.hpp>
+#include <sol/state.hpp>
+
 #include "Events/EventHandling.h"
 #include "Utility/AssetManager.h"
 #include "SceneLogic/SceneManager.h"
@@ -22,6 +26,7 @@ namespace ms {
         WorldBox worldBox;
         sf::ContextSettings settings;
         sf::RenderWindow mainWindow;
+        sol::state lua;
         utility::EventHandling eventHandler;
         utility::AssetManager assetManager;
         scene_logic::SceneManager sceneManager;
@@ -36,6 +41,10 @@ namespace ms {
         Game();
 
         sf::RenderWindow &getMainWindow();
+        [[nodiscard]] std::shared_ptr<World> getCurrentWorld() const {
+            auto* currentScene = sceneManager.getCurrentScene();
+            return currentScene ? currentScene->getWorld() : nullptr;
+        }
         void requestClose() { closeRequested = true; }
 
         utility::AssetManager &getAssetManager() { return assetManager; }

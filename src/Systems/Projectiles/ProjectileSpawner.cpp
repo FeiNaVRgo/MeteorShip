@@ -9,16 +9,18 @@
 #include "Components/Projectile.h"
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
+#include "ECS/World.h"
 #include "Utility/UtiFuncs.h"
 
 namespace ms::systems {
     ecs::Entity spawnProjectile(
-        ecs::ECS& ecs,
+        World& world,
         const ecs::Entity owner,
         const sf::Vector2f origin,
         const float angleRadians,
         const float speedMultiplier,
         const inventory::ShootableSpell& spellInfo) {
+        auto& ecs = world.getECS();
         const auto entity = ecs.createEntity();
         auto& transform = ecs.addComponent<components::Transform>(entity);
         transform.setPosition(origin);
@@ -79,7 +81,7 @@ namespace ms::systems {
         }
 
         inventory::ModifierContext context{
-            .entityManager = ecs,
+            .world = world,
             .projectileEntity = entity,
             .targetEntity = 0,
             .hitNormal = {},
@@ -95,7 +97,8 @@ namespace ms::systems {
         return entity;
     }
 
-    void releaseProjectilePayload(ecs::ECS& ecs, const ecs::Entity projectileEntity) {
+    void releaseProjectilePayload(World& world, const ecs::Entity projectileEntity) {
+        auto& ecs = world.getECS();
         if (!ecs.isEntityAlive(projectileEntity) ||
             !ecs.hasComponent<components::Projectile>(projectileEntity) ||
             !ecs.hasComponent<components::Transform>(projectileEntity) ||
@@ -122,7 +125,7 @@ namespace ms::systems {
             const float payloadAngle = index < payloadAngles.size()
                                            ? payloadAngles[index]
                                            : angleRadians;
-            spawnProjectile(ecs, owner, origin, payloadAngle, speedMultiplier, payload[index]);
+            spawnProjectile(world, owner, origin, payloadAngle, speedMultiplier, payload[index]);
         }
     }
 }

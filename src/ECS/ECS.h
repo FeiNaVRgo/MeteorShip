@@ -113,6 +113,8 @@ namespace ms {
             T* raw_data() { return components.data(); }
             [[nodiscard]] const T* raw_data() const { return components.data(); }
 
+
+            //probably useless function
             template<typename Func>
             void each(Func&& func) {
                 for (size_t i = 0; i < dense.size(); ++i) {

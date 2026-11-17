@@ -116,7 +116,7 @@ namespace ms::scene_logic::scenes {
             game.getEventHandler(),
             [this](Event::RemoveEntity const& e) { world->getECS().destroyEntity(e.entity); });
         createPlayer();
-        for (int i = 0; i < 50; i++) {
+        for (int i = 0; i < 1; i++) {
             createEnemy();
         }
     }
@@ -127,14 +127,19 @@ namespace ms::scene_logic::scenes {
 
     void SceneMain::update(float elapsedTime) {
         world->getQuadtree().draw(game.getMainWindow());
+
         constexpr float fixedTimeStep = 1.f / 60.f;
         constexpr float maximumFrameTime = 0.25f;
+
         simulationAccumulator += std::min(elapsedTime, maximumFrameTime);
+
         while (simulationAccumulator >= fixedTimeStep) {
             world->getECS().update(fixedTimeStep);
             simulationAccumulator -= fixedTimeStep;
         }
+
         world->getECS().render();
+
         while (const auto event = world->getEventDispatcher().poll()) {
             game.getEventHandler().handleEvent(event);
         }

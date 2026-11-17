@@ -14,8 +14,8 @@
 #include "ECS/ECS.h"
 #include "Spell.h"
 
-namespace ms::inventory {
-
+namespace ms {
+    class World;
 }
 
 namespace ms::inventory {
@@ -115,7 +115,7 @@ namespace ms::inventory {
         bool readyToShoot() const {
             return castDelayRemaining <= 0.f && rechargeRemaining <= 0.f;
         }
-        void shoot(ecs::ECS& entityManager, ecs::Entity owner, sf::Vector2f origin,
+        void shoot(World& world, ecs::Entity owner, sf::Vector2f origin,
                    float aimAngleRadians);
         void resetDeck();
         std::size_t addSpellSlot();

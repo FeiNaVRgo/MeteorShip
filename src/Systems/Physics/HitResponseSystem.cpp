@@ -34,10 +34,11 @@ namespace ms::systems {
         }
 
         void handleProjectileHit(
-            ecs::ECS& ecs,
+            World& world,
             const ecs::Entity projectileEntity,
             const ecs::Entity targetEntity,
             const sf::Vector2f hitNormal) {
+            auto& ecs = world.getECS();
             auto& projectile = ecs.getComponent<components::Projectile>(projectileEntity);
             if (projectile.penetrating && !projectile.piercing &&
                 !projectile.hitEntities.insert(targetEntity).second) {
@@ -48,7 +49,7 @@ namespace ms::systems {
             const bool survivesHit = projectile.piercing || projectile.penetrating;
             const auto triggerType = projectile.triggerType;
             inventory::ModifierContext context{
-                .entityManager = ecs,
+                .world = world,
                 .projectileEntity = projectileEntity,
                 .targetEntity = targetEntity,
                 .hitNormal = hitNormal,
@@ -56,7 +57,7 @@ namespace ms::systems {
             };
             if (triggerType == inventory::TriggerType::Collision ||
                 triggerType == inventory::TriggerType::Timer) {
-                releaseProjectilePayload(ecs, projectileEntity);
+                releaseProjectilePayload(world, projectileEntity);
             }
 
             for (const auto& hook : modifierHooks) {
@@ -109,7 +110,7 @@ namespace ms::systems {
         }
 
         handleProjectileHit(
-            ecs,
+            getWorld(),
             projectileEntity,
             targetEntity,
             {});

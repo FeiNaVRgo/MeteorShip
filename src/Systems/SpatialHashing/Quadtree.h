@@ -90,6 +90,11 @@ namespace ms::systems {
             return result;
         }
 
+        [[nodiscard]] std::vector<ecs::Entity> query(const float radius, const sf::Vector2f point) const {
+            const sf::Vector2f half = {radius, -radius};
+            return query(sf::FloatRect(point - half, {2.f * radius, 2.f * radius}));
+        }
+
         [[nodiscard]] std::vector<ecs::Entity> queryPotential(
             const sf::FloatRect& bounds) const {
             return query(bounds);

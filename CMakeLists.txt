@@ -25,6 +25,16 @@ target_link_libraries(${PROJECT_NAME} PRIVATE pybind11::embed)
 pybind11_add_module(CPPModule ${PROJECT_SOURCES})
 target_include_directories(CPPModule PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_link_libraries(CPPModule PRIVATE OpenCL::OpenCL)
+target_link_libraries(CPPModule PRIVATE
+    Python3::Python
+    glad::glad
+    SFML::Network SFML::Graphics SFML::Window SFML::Audio SFML::System
+    imgui::imgui
+    ${Boost_LIBRARIES}
+    nuklear
+    BT::behaviortree_cpp
+)
+target_compile_definitions(CPPModule PRIVATE nsel_CONFIG_SELECT_EXPECTED=1)
 target_link_libraries(${PROJECT_NAME} PRIVATE OpenCL::OpenCL)
 
 find_package(glad CONFIG REQUIRED)
@@ -45,6 +55,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE nuklear)
 
 find_package(behaviortree_cpp CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE BT::behaviortree_cpp)
+
+find_package(unofficial-lua CONFIG REQUIRED)
+find_package(sol2 CONFIG REQUIRED)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE SOL_USING_CXX_LUA=1)
+target_link_libraries(${PROJECT_NAME} PRIVATE unofficial::lua::lua-cpp sol2::sol2)
 
 add_custom_target(copy_assets
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_LIST_DIR}/assets ${CMAKE_CURRENT_BINARY_DIR}/assets

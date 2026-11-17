@@ -31,15 +31,18 @@
 #include "Components/BehaviorTree.h"
 #include "Components/BoundingBox.h"
 #include "Components/CollisionShape.h"
+#include "Components/Damage.h"
 #include "Components/Drawable.h"
 #include "Components/Enemy.h"
 #include "Components/Hitbox.h"
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
 #include "Components/Player.h"
+#include "Components/Scene.h"
 #include "Events/EventDispatcher.h"
 #include "SceneLogic/Scenes/SceneMainMenu.h"
 #include "SceneLogic/Scenes/SceneSettings.h"
+#include "../Bindings/LuaBinding/lua_bindings.h"
 
 namespace py = pybind11;
 
@@ -51,6 +54,9 @@ namespace ms
                   eventHandler(*this),
                   sceneManager(worldBox.getWorlds()),
                   globalBlackboard(BT::Blackboard::create()) {
+
+        lua.open_libraries(sol::lib::base, sol::lib::package);
+        scripting::lua_bind(lua, *this);
 
         {
             //here is where we register all of our nodes for behavior
@@ -100,6 +106,8 @@ namespace ms
         worldBox.registerComponent<components::Enemy>();
         worldBox.registerComponent<components::TurretMountLayout>();
         worldBox.registerComponent<components::Projectile>();
+        worldBox.registerComponent<components::DamageAmount>();
+        worldBox.registerComponent<components::Scene>();
 
         sceneManager.changeScene("main_menu");
     }
@@ -151,6 +159,7 @@ namespace ms
         updateFunc();
         */
 
+        lua.script_file("scripts/lua/main.lua");
 
 
         while (mainWindow.isOpen()) {

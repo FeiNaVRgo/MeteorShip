@@ -1,4 +1,5 @@
 #include "Turret.h"
+#include "ECS/World.h"
 
 #include <algorithm>
 #include <cmath>
@@ -44,7 +45,7 @@ namespace ms::inventory {
         cycleRechargeModifier = 0.f;
     }
 
-    void Turret::shoot(ecs::ECS& entityManager, const ecs::Entity owner,
+    void Turret::shoot(World& world, const ecs::Entity owner,
                        const sf::Vector2f origin, const float aimAngleRadians) {
         if (!readyToShoot()) return;
 
@@ -59,7 +60,7 @@ namespace ms::inventory {
             for (std::size_t i = 0; i < spells.size(); ++i) {
                 float angle = (i < angles.size()) ? angles[i] : aimAngleRadians;
                 ms::systems::spawnProjectile(
-                    entityManager, owner, origin, angle, stats.speedMultiplier, spells[i]);
+                    world, owner, origin, angle, stats.speedMultiplier, spells[i]);
             }
         }
     }

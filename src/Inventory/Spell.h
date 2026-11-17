@@ -15,6 +15,10 @@
 #include "ECS/ECS.h"
 #include "Utility/AnimatedSprite.h"
 
+namespace ms {
+    class World;
+}
+
 namespace ms::inventory {
     class Turret;
 
@@ -44,17 +48,15 @@ namespace ms::inventory {
         Expiration   // When projectile lifetime expires
     };
 
-    // Forward declaration of ShootableSpell
-    struct ShootableSpell;
-
-    // Context passed to modifier callbacks
+    // Context passed to projectile and modifier callbacks
     struct ModifierContext {
-        ecs::ECS& entityManager;
-        ecs::Entity projectileEntity;
+        World& world;
+        ecs::Entity projectileEntity{};
         ecs::Entity targetEntity = 0; // Valid on collision / hit
         sf::Vector2f hitNormal{};
         float deltaTime = 0.f;
     };
+    using ProjectileContext = ModifierContext;
 
     using ModifierInitFunc = std::function<void(ModifierContext&)>;
     using ModifierUpdateFunc = std::function<void(ModifierContext&)>;
@@ -66,7 +68,12 @@ namespace ms::inventory {
         ModifierUpdateFunc onUpdate;       // Called every frame/tick (continuous stuff, e.g. homing, gravity, trails)
         ModifierCollisionFunc onCollision; // Called on collision / hit
         ModifierDeathFunc onDeath;         // Called when projectile dies/expires
+
+        [[nodiscard]] bool hasAnyHook() const {
+            return onInit != nullptr || onUpdate != nullptr || onCollision != nullptr || onDeath != nullptr;
+        }
     };
+    using ProjectileHook = ProjectileModifierHook;
 
     using UtilitySpellFunc = std::function<void()>;
 
@@ -176,12 +183,24 @@ namespace ms::inventory {
 
     class Projectile : public ProjectileBase {
     public:
+        ProjectileHook hook;
         using ProjectileBase::ProjectileBase;
+
+        Projectile(ProjectileStats stats, ProjectileHook hook)
+            : ProjectileBase(std::move(stats)), hook(std::move(hook)) {}
+        explicit Projectile(ProjectileHook hook)
+            : ProjectileBase(), hook(std::move(hook)) {}
     };
 
     class StaticProjectile : public ProjectileBase {
     public:
+        ProjectileHook hook;
         using ProjectileBase::ProjectileBase;
+
+        StaticProjectile(ProjectileStats stats, ProjectileHook hook)
+            : ProjectileBase(std::move(stats)), hook(std::move(hook)) {}
+        explicit StaticProjectile(ProjectileHook hook)
+            : ProjectileBase(), hook(std::move(hook)) {}
     };
 
     class Utility : public ProjectileBase {

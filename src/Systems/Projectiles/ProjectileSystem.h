@@ -24,15 +24,15 @@ namespace ms::systems {
             auto& entityManager = world.getECS();
             std::vector<ExpiredProjectile> expiredProjectiles;
             entityManager.view<components::Projectile>().each(
-                [this, deltaTime, &expiredProjectiles](const ecs::Entity entity,
-                                                       components::Projectile& projectile) {
+                [this, deltaTime, &expiredProjectiles, &world](const ecs::Entity entity,
+                                                               components::Projectile& projectile) {
                     if (projectile.pendingRemoval) {
                         return;
                     }
 
                     const auto hooks = projectile.modifierHooks;
                     inventory::ModifierContext context{
-                        .entityManager = getWorld().getECS(),
+                        .world = world,
                         .projectileEntity = entity,
                         .targetEntity = 0,
                         .hitNormal = {},
@@ -64,11 +64,11 @@ namespace ms::systems {
                     continue;
                 }
                 if (expired.releasePayload) {
-                    releaseProjectilePayload(entityManager, expired.entity);
+                    releaseProjectilePayload(world, expired.entity);
                 }
 
                 inventory::ModifierContext context{
-                    .entityManager = entityManager,
+                    .world = world,
                     .projectileEntity = expired.entity,
                     .targetEntity = 0,
                     .hitNormal = {},

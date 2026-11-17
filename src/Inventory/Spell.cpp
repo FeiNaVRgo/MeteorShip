@@ -8,6 +8,8 @@
 #include "Components/Enemy.h"
 #include "Components/Rigidbody.h"
 #include "Components/Transform.h"
+#include "ECS/World.h"
+#include "Events/Event.h"
 #include "Utility/UtiFuncs.h"
 
 namespace ms::inventory {
@@ -135,7 +137,13 @@ namespace ms::inventory {
         stats.rechargeTime = 0.8f;
         stats.manaDrain = 25.f;
         stats.friendlyFire = true;
-        return Spell("Bomb", Projectile(stats), std::move(icon), std::move(projSprite));
+
+        ProjectileHook hook;
+        hook.onDeath = [](ModifierContext& ctx) {
+
+        };
+
+        return Spell("Bomb", Projectile(stats, std::move(hook)), std::move(icon), std::move(projSprite));
     }
 
     Spell SpellFactory::makeDamagePlus(float bonusDamage, std::optional<sf::Sprite> icon) {
@@ -169,7 +177,7 @@ namespace ms::inventory {
         ProjectileModifierHook hook;
         // Continuous update hook: steers velocity towards nearest enemy
         hook.onUpdate = [turnRate, searchRadius](ModifierContext& ctx) {
-            auto& ecs = ctx.entityManager;
+            auto& ecs = ctx.world.getECS();
             if (!ecs.isEntityAlive(ctx.projectileEntity) ||
                 !ecs.hasComponent<components::Transform>(ctx.projectileEntity) ||
                 !ecs.hasComponent<components::Rigidbody>(ctx.projectileEntity)) {
@@ -386,6 +394,17 @@ namespace ms::inventory {
             auto node = std::make_unique<PayloadNode>(*spell);
             node->combinedStats.combine(state.modifiers);
             node->modifierHooks = state.modifierHooks;
+
+            if (auto* proj = std::get_if<Projectile>(&projType)) {
+                if (proj->hook.hasAnyHook()) {
+                    node->modifierHooks.push_back(proj->hook);
+                }
+            } else if (auto* staticProj = std::get_if<StaticProjectile>(&projType)) {
+                if (staticProj->hook.hasAnyHook()) {
+                    node->modifierHooks.push_back(staticProj->hook);
+                }
+            }
+
             node->utility = state.utilityFuncs;
 
             // Check if this projectile is a trigger spell:

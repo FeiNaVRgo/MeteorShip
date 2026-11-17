@@ -197,10 +197,10 @@ namespace ms::systems {
         }
 
         void fireShots(const std::vector<ShotRequest>& shots) {
-            auto& entityManager = getWorld().getECS();
+            auto& world = getWorld();
             for (const auto& [mountIndex, owner, origin, aimAngleRadians] : shots) {
                 if (auto* turret = inventory.turretAt(mountIndex)) {
-                    turret->shoot(entityManager, owner, origin, aimAngleRadians);
+                    turret->shoot(world, owner, origin, aimAngleRadians);
                 }
             }
         }
