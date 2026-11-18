@@ -1,7 +1,7 @@
 #ifndef METEORSHIP_LUA_GAME_BINDINGS_H
 #define METEORSHIP_LUA_GAME_BINDINGS_H
 
-#include <sol/sol.hpp>
+#include "lua_reflection.h"
 
 #include <optional>
 #include <stdexcept>
@@ -41,6 +41,12 @@ namespace ms::scripting {
         };
     }
 
+    template<typename... Events>
+    void bind_event_subscribers(sol::usertype<utility::EventHandling>& event_handling) {
+        ((event_handling["on_" + to_lua_snake_case(std::meta::identifier_of(^^Events))] =
+              make_event_subscriber<Events>()), ...);
+    }
+
     template<typename T>
     void bind_component_access(sol::usertype<ecs::ECS>& ecsType, const std::string& name) {
         ecsType["add_" + name] = [](ecs::ECS& ecs, ecs::Entity entity) -> T& {
@@ -75,65 +81,28 @@ namespace ms::scripting {
     inline void lua_game_bind(sol::state& lua, Game& game) {
         using namespace components;
 
-        lua.new_enum("ComponentDamageType",
-            "Projectile", DamageType::Projectile,
-            "Fire", DamageType::Fire,
-            "Frost", DamageType::Frost,
-            "Electric", DamageType::Electric,
-            "Poison", DamageType::Poison,
-            "Explosion", DamageType::Explosion);
-        lua.new_enum("ProjectileTriggerType",
-            "None", inventory::TriggerType::None,
-            "Collision", inventory::TriggerType::Collision,
-            "Timer", inventory::TriggerType::Timer,
-            "Expiration", inventory::TriggerType::Expiration);
-        lua.new_enum("SpellFormationType",
-            "None", inventory::FormationType::None,
-            "Spread", inventory::FormationType::Spread,
-            "BiDirectional", inventory::FormationType::BiDirectional,
-            "TriDirectional", inventory::FormationType::TriDirectional,
-            "AboveAndBelow", inventory::FormationType::AboveAndBelow,
-            "Hexagonal", inventory::FormationType::Hexagonal,
-            "Behind", inventory::FormationType::Behind);
+        bind_reflected_enum<DamageType>(lua, "ComponentDamageType");
+        bind_reflected_enum<inventory::TriggerType>(lua, "ProjectileTriggerType");
+        bind_reflected_enum<inventory::FormationType>(lua, "SpellFormationType");
 
-        lua.new_usertype<DamageAmount>("DamageAmount",
-            sol::constructors<sol::types<>>(),
-            "type", &DamageAmount::type,
-            "amount", &DamageAmount::amount);
+        new_reflected_usertype<DamageAmount>(lua, "DamageAmount", sol::constructors<sol::types<>>());
         lua["DamageAmount"]["DamageType"] = lua.get<sol::object>("ComponentDamageType");
 
-        lua.new_usertype<inventory::ProjectileStats>("ProjectileStats",
-            sol::constructors<sol::types<>>(),
-            "uses", &inventory::ProjectileStats::uses,
-            "mana_drain", &inventory::ProjectileStats::manaDrain,
-            "cast_delay", &inventory::ProjectileStats::castDelay,
-            "recharge_time", &inventory::ProjectileStats::rechargeTime,
-            "spread_modification", &inventory::ProjectileStats::spreadModification,
-            "radius", &inventory::ProjectileStats::radius,
-            "speed", &inventory::ProjectileStats::speed,
-            "crit_change_bonus", &inventory::ProjectileStats::critChangeBonus,
-            "damage", &inventory::ProjectileStats::damage,
-            "life_time", &inventory::ProjectileStats::lifeTime,
-            "timer_life_time", &inventory::ProjectileStats::timerLifeTime,
-            "friendly_fire", &inventory::ProjectileStats::friendlyFire,
-            "piercing", &inventory::ProjectileStats::Piercing,
-            "penetrating", &inventory::ProjectileStats::Penetrating,
-            "trigger_type", &inventory::ProjectileStats::triggerType);
+        auto projectileStats = new_reflected_usertype_snake_case<inventory::ProjectileStats>(
+            lua, "ProjectileStats", sol::constructors<sol::types<>>());
         lua["ProjectileStats"]["TriggerType"] = lua.get<sol::object>("ProjectileTriggerType");
 
-        lua.new_usertype<inventory::SpellFormation>("SpellFormation",
+        auto spellFormation = new_reflected_usertype_snake_case<inventory::SpellFormation>(
+            lua, "SpellFormation",
             sol::constructors<sol::types<>, sol::types<inventory::FormationType>,
-                              sol::types<inventory::FormationType, float>>(),
-            "type", &inventory::SpellFormation::type,
-            "spread_angle_degrees", &inventory::SpellFormation::spreadAngleDegrees,
-            "calculate_angles", [](const inventory::SpellFormation& formation, std::size_t count, float baseAngle) {
+                              sol::types<inventory::FormationType, float>>());
+        spellFormation["calculate_angles"] = [](const inventory::SpellFormation& formation, std::size_t count, float baseAngle) {
                 return sol::as_table(formation.calculateAngles(count, baseAngle));
-            });
+            };
         lua["SpellFormation"]["FormationType"] = lua.get<sol::object>("SpellFormationType");
 
-        lua.new_usertype<inventory::ProjectileModifierHook>("ProjectileModifierHook",
+        auto hookType = lua.new_usertype<inventory::ProjectileModifierHook>("ProjectileModifierHook",
             sol::constructors<sol::types<>>(),
-            "has_any_hook", &inventory::ProjectileModifierHook::hasAnyHook,
             "set_on_init", [](inventory::ProjectileModifierHook& hook, sol::function callback) {
                 hook.onInit = [callback = std::move(callback)](inventory::ModifierContext& context) mutable {
                     callback(context);
@@ -154,6 +123,7 @@ namespace ms::scripting {
                     callback(context);
                 };
             });
+        bind_reflected_methods(hookType);
 
         lua.new_usertype<inventory::Spell>("Spell",
             sol::constructors<sol::types<>>(),
@@ -212,8 +182,7 @@ namespace ms::scripting {
             "tree", sol::property([](BehaviorTree& value) -> BT::Tree& { return value.BTTree; }),
             "blackboard", sol::property([](BehaviorTree& value) { return value.blackboard; }),
             "has_blackboard", [](const BehaviorTree& value) { return static_cast<bool>(value.blackboard); });
-        lua.new_usertype<BoundingBox>("BoundingBox", sol::constructors<sol::types<>>(),
-            "bounds", &BoundingBox::bounds);
+        new_reflected_usertype<BoundingBox>(lua, "BoundingBox", sol::constructors<sol::types<>>());
         lua.new_usertype<CollisionShape>("CollisionShape", sol::constructors<sol::types<>>(),
             "vertices", [](const CollisionShape& value) { return sol::as_table(value.getVertices()); },
             "vertex_count", [](const CollisionShape& value) { return value.getVertices().size(); });
@@ -296,9 +265,7 @@ namespace ms::scripting {
             "has_hit_entity", [](const Projectile& value, ecs::Entity entity) { return value.hitEntities.contains(entity); },
             "mark_hit_entity", [](Projectile& value, ecs::Entity entity) { value.hitEntities.insert(entity); },
             "clear_hit_entities", [](Projectile& value) { value.hitEntities.clear(); });
-        lua.new_usertype<Rigidbody>("Rigidbody", sol::constructors<sol::types<>>(),
-            "velocity", &Rigidbody::velocity,
-            "acceleration", &Rigidbody::acceleration);
+        new_reflected_usertype<Rigidbody>(lua, "Rigidbody", sol::constructors<sol::types<>>());
         lua.new_usertype<Scene>("SceneComponent", sol::constructors<sol::types<>>());
         lua.new_usertype<Transform>("Transform", sol::constructors<sol::types<>>(),
             sol::base_classes, sol::bases<sf::Transformable>());
@@ -333,16 +300,9 @@ namespace ms::scripting {
         bind_component_access<DamageAmount>(ecsType, "damage_amount");
         bind_component_access<Scene>(ecsType, "scene");
 
-        lua.new_usertype<Event::RemoveEntity>("RemoveEntityEvent", sol::no_constructor,
-            "entity", &Event::RemoveEntity::entity);
-        lua.new_usertype<Event::CollisionDetected>("CollisionDetectedEvent", sol::no_constructor,
-            "first", &Event::CollisionDetected::first,
-            "second", &Event::CollisionDetected::second,
-            "normal", &Event::CollisionDetected::normal,
-            "penetration", &Event::CollisionDetected::penetration);
-        lua.new_usertype<Event::HitDetected>("HitDetectedEvent", sol::no_constructor,
-            "first", &Event::HitDetected::first,
-            "second", &Event::HitDetected::second);
+        new_reflected_view<Event::RemoveEntity>(lua, "RemoveEntityEvent");
+        new_reflected_view<Event::CollisionDetected>(lua, "CollisionDetectedEvent");
+        new_reflected_view<Event::HitDetected>(lua, "HitDetectedEvent");
         lua.new_usertype<Event>("Event", sol::no_constructor,
             "kind", [](const Event& value) {
                 return std::visit([](const auto& event) -> std::string {
@@ -382,32 +342,15 @@ namespace ms::scripting {
             "disconnect", &boost::signals2::connection::disconnect);
 
         auto eventHandling = lua.new_usertype<utility::EventHandling>("EventHandling", sol::no_constructor);
-        eventHandling["on_closed"] = make_event_subscriber<sf::Event::Closed>();
-        eventHandling["on_resized"] = make_event_subscriber<sf::Event::Resized>();
-        eventHandling["on_focus_lost"] = make_event_subscriber<sf::Event::FocusLost>();
-        eventHandling["on_focus_gained"] = make_event_subscriber<sf::Event::FocusGained>();
-        eventHandling["on_text_entered"] = make_event_subscriber<sf::Event::TextEntered>();
-        eventHandling["on_key_pressed"] = make_event_subscriber<sf::Event::KeyPressed>();
-        eventHandling["on_key_released"] = make_event_subscriber<sf::Event::KeyReleased>();
-        eventHandling["on_mouse_wheel_scrolled"] = make_event_subscriber<sf::Event::MouseWheelScrolled>();
-        eventHandling["on_mouse_button_pressed"] = make_event_subscriber<sf::Event::MouseButtonPressed>();
-        eventHandling["on_mouse_button_released"] = make_event_subscriber<sf::Event::MouseButtonReleased>();
-        eventHandling["on_mouse_moved"] = make_event_subscriber<sf::Event::MouseMoved>();
-        eventHandling["on_mouse_moved_raw"] = make_event_subscriber<sf::Event::MouseMovedRaw>();
-        eventHandling["on_mouse_entered"] = make_event_subscriber<sf::Event::MouseEntered>();
-        eventHandling["on_mouse_left"] = make_event_subscriber<sf::Event::MouseLeft>();
-        eventHandling["on_joystick_button_pressed"] = make_event_subscriber<sf::Event::JoystickButtonPressed>();
-        eventHandling["on_joystick_button_released"] = make_event_subscriber<sf::Event::JoystickButtonReleased>();
-        eventHandling["on_joystick_moved"] = make_event_subscriber<sf::Event::JoystickMoved>();
-        eventHandling["on_joystick_connected"] = make_event_subscriber<sf::Event::JoystickConnected>();
-        eventHandling["on_joystick_disconnected"] = make_event_subscriber<sf::Event::JoystickDisconnected>();
-        eventHandling["on_touch_began"] = make_event_subscriber<sf::Event::TouchBegan>();
-        eventHandling["on_touch_moved"] = make_event_subscriber<sf::Event::TouchMoved>();
-        eventHandling["on_touch_ended"] = make_event_subscriber<sf::Event::TouchEnded>();
-        eventHandling["on_sensor_changed"] = make_event_subscriber<sf::Event::SensorChanged>();
-        eventHandling["on_remove_entity"] = make_event_subscriber<Event::RemoveEntity>();
-        eventHandling["on_collision_detected"] = make_event_subscriber<Event::CollisionDetected>();
-        eventHandling["on_hit_detected"] = make_event_subscriber<Event::HitDetected>();
+        bind_event_subscribers<
+            sf::Event::Closed, sf::Event::Resized, sf::Event::FocusLost, sf::Event::FocusGained,
+            sf::Event::TextEntered, sf::Event::KeyPressed, sf::Event::KeyReleased,
+            sf::Event::MouseWheelScrolled, sf::Event::MouseButtonPressed, sf::Event::MouseButtonReleased,
+            sf::Event::MouseMoved, sf::Event::MouseMovedRaw, sf::Event::MouseEntered, sf::Event::MouseLeft,
+            sf::Event::JoystickButtonPressed, sf::Event::JoystickButtonReleased, sf::Event::JoystickMoved,
+            sf::Event::JoystickConnected, sf::Event::JoystickDisconnected, sf::Event::TouchBegan,
+            sf::Event::TouchMoved, sf::Event::TouchEnded, sf::Event::SensorChanged,
+            Event::RemoveEntity, Event::CollisionDetected, Event::HitDetected>(eventHandling);
 
         lua.new_usertype<systems::Quadtree>("Quadtree", sol::no_constructor,
             "world_bounds", &systems::Quadtree::worldBounds,

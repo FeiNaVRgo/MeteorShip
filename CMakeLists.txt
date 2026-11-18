@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 4.0.2)
 project(MeteorShip)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -10,9 +10,15 @@ file(GLOB_RECURSE PROJECT_INCLUDE CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/s
 
 add_executable(${PROJECT_NAME} "${CMAKE_CURRENT_LIST_DIR}/main.cpp" ${PROJECT_INCLUDE})
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(${PROJECT_NAME} PRIVATE -freflection)
+else()
+    message(FATAL_ERROR "This project requires GCC 16+ for C++26 reflection, found ${CMAKE_CXX_COMPILER_ID}")
+endif()
+
 target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
-# Match BehaviorTree.CPP's expected-lite ABI when its headers are used with C++23.
+# Match BehaviorTree.CPP's expected-lite ABI when its headers are used with C++26.
 target_compile_definitions(${PROJECT_NAME} PRIVATE nsel_CONFIG_SELECT_EXPECTED=1)
 
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
@@ -23,6 +29,7 @@ find_package(pybind11 CONFIG REQUIRED)
 find_package(OpenCL REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE pybind11::embed)
 pybind11_add_module(CPPModule ${PROJECT_SOURCES})
+target_compile_options(CPPModule PRIVATE -freflection)
 target_include_directories(CPPModule PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_link_libraries(CPPModule PRIVATE OpenCL::OpenCL)
 target_link_libraries(CPPModule PRIVATE

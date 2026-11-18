@@ -1,7 +1,7 @@
 #ifndef METEORSHIP_LUA_SFML_BINDINGS_H
 #define METEORSHIP_LUA_SFML_BINDINGS_H
 
-#include <sol/sol.hpp>
+#include "sol_optional_compat.h"
 
 #include <cstdint>
 #include <string>
@@ -9,18 +9,17 @@
 #include <vector>
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
+#include "lua_reflection.h"
 
 namespace ms::scripting {
     template<typename Vector, typename Scalar>
     void bind_vector2(sol::state& lua, const char* name) {
-        lua.new_usertype<Vector>(name,
-            sol::constructors<sol::types<>, sol::types<Scalar, Scalar>>(),
-            "x", &Vector::x,
-            "y", &Vector::y,
-            "__add", [](const Vector& lhs, const Vector& rhs) { return lhs + rhs; },
-            "__sub", [](const Vector& lhs, const Vector& rhs) { return lhs - rhs; },
-            "__mul", [](const Vector& value, Scalar scale) { return value * scale; },
-            "__div", [](const Vector& value, Scalar scale) { return value / scale; });
+        auto vectorType = new_reflected_usertype<Vector>(lua, name,
+            sol::constructors<sol::types<>, sol::types<Scalar, Scalar>>());
+        vectorType["__add"] = [](const Vector& lhs, const Vector& rhs) { return lhs + rhs; };
+        vectorType["__sub"] = [](const Vector& lhs, const Vector& rhs) { return lhs - rhs; };
+        vectorType["__mul"] = [](const Vector& value, Scalar scale) { return value * scale; };
+        vectorType["__div"] = [](const Vector& value, Scalar scale) { return value / scale; };
     }
 
     inline void lua_sfml_bind(sol::state& lua) {
@@ -32,26 +31,19 @@ namespace ms::scripting {
         lua["Vector2f"]["normalized"] = [](const Vector2f& value) { return value.normalized(); };
         bind_vector2<Vector2i, int>(lua, "Vector2i");
         bind_vector2<Vector2u, unsigned int>(lua, "Vector2u");
-        lua.new_usertype<Vector3f>("Vector3f",
-            sol::constructors<sol::types<>, sol::types<float, float, float>>(),
-            "x", &Vector3f::x,
-            "y", &Vector3f::y,
-            "z", &Vector3f::z);
+        new_reflected_usertype<Vector3f>(lua, "Vector3f",
+            sol::constructors<sol::types<>, sol::types<float, float, float>>());
 
-        lua.new_usertype<FloatRect>("FloatRect",
-            sol::constructors<sol::types<>, sol::types<Vector2f, Vector2f>>(),
-            "position", &FloatRect::position,
-            "size", &FloatRect::size,
-            "find_intersection", [](const FloatRect& lhs, const FloatRect& rhs) {
-                return lhs.findIntersection(rhs);
-            });
-        lua.new_usertype<IntRect>("IntRect",
-            sol::constructors<sol::types<>, sol::types<Vector2i, Vector2i>>(),
-            "position", &IntRect::position,
-            "size", &IntRect::size,
-            "find_intersection", [](const IntRect& lhs, const IntRect& rhs) {
-                return lhs.findIntersection(rhs);
-            });
+        auto floatRect = new_reflected_usertype<FloatRect>(lua, "FloatRect",
+            sol::constructors<sol::types<>, sol::types<Vector2f, Vector2f>>());
+        floatRect["find_intersection"] = [](const FloatRect& lhs, const FloatRect& rhs) {
+            return lhs.findIntersection(rhs);
+        };
+        auto intRect = new_reflected_usertype<IntRect>(lua, "IntRect",
+            sol::constructors<sol::types<>, sol::types<Vector2i, Vector2i>>());
+        intRect["find_intersection"] = [](const IntRect& lhs, const IntRect& rhs) {
+            return lhs.findIntersection(rhs);
+        };
 
         lua.new_usertype<Angle>("Angle", sol::no_constructor,
             "as_degrees", &Angle::asDegrees,
@@ -67,13 +59,9 @@ namespace ms::scripting {
             "elapsed_time", &Clock::getElapsedTime,
             "restart", &Clock::restart);
 
-        lua.new_usertype<Color>("Color",
+        new_reflected_usertype<Color>(lua, "Color",
             sol::constructors<sol::types<>, sol::types<std::uint8_t, std::uint8_t, std::uint8_t>,
-                              sol::types<std::uint8_t, std::uint8_t, std::uint8_t, std::uint8_t>>(),
-            "r", &Color::r,
-            "g", &Color::g,
-            "b", &Color::b,
-            "a", &Color::a);
+                              sol::types<std::uint8_t, std::uint8_t, std::uint8_t, std::uint8_t>>());
         lua["Color"]["Black"] = Color::Black;
         lua["Color"]["White"] = Color::White;
         lua["Color"]["Red"] = Color::Red;
@@ -135,18 +123,9 @@ namespace ms::scripting {
             sol::base_classes, sol::bases<Drawable, Transformable>(),
             "texture_rect", sol::property(&Sprite::getTextureRect, &Sprite::setTextureRect));
 
-        lua.new_enum("PrimitiveType",
-            "Points", PrimitiveType::Points,
-            "Lines", PrimitiveType::Lines,
-            "LineStrip", PrimitiveType::LineStrip,
-            "Triangles", PrimitiveType::Triangles,
-            "TriangleStrip", PrimitiveType::TriangleStrip,
-            "TriangleFan", PrimitiveType::TriangleFan);
-        lua.new_usertype<Vertex>("Vertex",
-            sol::constructors<sol::types<>, sol::types<Vector2f>, sol::types<Vector2f, Color>>(),
-            "position", &Vertex::position,
-            "color", &Vertex::color,
-            "tex_coords", &Vertex::texCoords);
+        bind_reflected_enum<PrimitiveType>(lua, "PrimitiveType");
+        new_reflected_usertype_snake_case<Vertex>(lua, "Vertex",
+            sol::constructors<sol::types<>, sol::types<Vector2f>, sol::types<Vector2f, Color>>());
         lua.new_usertype<VertexArray>("VertexArray",
             sol::constructors<sol::types<>, sol::types<PrimitiveType>,
                               sol::types<PrimitiveType, std::size_t>>(),
@@ -179,73 +158,11 @@ namespace ms::scripting {
             "display", &RenderWindow::display,
             "draw", [](RenderWindow& window, const Drawable& drawable) { window.draw(drawable); });
 
-        lua.new_enum("KeyboardKey",
-            "Unknown", Keyboard::Key::Unknown,
-            "A", Keyboard::Key::A, "B", Keyboard::Key::B, "C", Keyboard::Key::C,
-            "D", Keyboard::Key::D, "E", Keyboard::Key::E, "F", Keyboard::Key::F,
-            "G", Keyboard::Key::G, "H", Keyboard::Key::H, "I", Keyboard::Key::I,
-            "J", Keyboard::Key::J, "K", Keyboard::Key::K, "L", Keyboard::Key::L,
-            "M", Keyboard::Key::M, "N", Keyboard::Key::N, "O", Keyboard::Key::O,
-            "P", Keyboard::Key::P, "Q", Keyboard::Key::Q, "R", Keyboard::Key::R,
-            "S", Keyboard::Key::S, "T", Keyboard::Key::T, "U", Keyboard::Key::U,
-            "V", Keyboard::Key::V, "W", Keyboard::Key::W, "X", Keyboard::Key::X,
-            "Y", Keyboard::Key::Y, "Z", Keyboard::Key::Z,
-            "Num0", Keyboard::Key::Num0, "Num1", Keyboard::Key::Num1,
-            "Num2", Keyboard::Key::Num2, "Num3", Keyboard::Key::Num3,
-            "Num4", Keyboard::Key::Num4, "Num5", Keyboard::Key::Num5,
-            "Num6", Keyboard::Key::Num6, "Num7", Keyboard::Key::Num7,
-            "Num8", Keyboard::Key::Num8, "Num9", Keyboard::Key::Num9,
-            "Escape", Keyboard::Key::Escape, "LControl", Keyboard::Key::LControl,
-            "LShift", Keyboard::Key::LShift, "LAlt", Keyboard::Key::LAlt,
-            "LSystem", Keyboard::Key::LSystem, "RControl", Keyboard::Key::RControl,
-            "RShift", Keyboard::Key::RShift, "RAlt", Keyboard::Key::RAlt,
-            "RSystem", Keyboard::Key::RSystem, "Menu", Keyboard::Key::Menu,
-            "LBracket", Keyboard::Key::LBracket, "RBracket", Keyboard::Key::RBracket,
-            "Semicolon", Keyboard::Key::Semicolon, "Comma", Keyboard::Key::Comma,
-            "Period", Keyboard::Key::Period, "Apostrophe", Keyboard::Key::Apostrophe,
-            "Slash", Keyboard::Key::Slash, "Backslash", Keyboard::Key::Backslash,
-            "Grave", Keyboard::Key::Grave, "Equal", Keyboard::Key::Equal,
-            "Hyphen", Keyboard::Key::Hyphen, "Space", Keyboard::Key::Space,
-            "Enter", Keyboard::Key::Enter, "Tab", Keyboard::Key::Tab,
-            "Backspace", Keyboard::Key::Backspace, "PageUp", Keyboard::Key::PageUp,
-            "PageDown", Keyboard::Key::PageDown, "End", Keyboard::Key::End,
-            "Home", Keyboard::Key::Home, "Insert", Keyboard::Key::Insert,
-            "Delete", Keyboard::Key::Delete, "Add", Keyboard::Key::Add,
-            "Subtract", Keyboard::Key::Subtract, "Multiply", Keyboard::Key::Multiply,
-            "Divide", Keyboard::Key::Divide,
-            "Left", Keyboard::Key::Left, "Right", Keyboard::Key::Right,
-            "Up", Keyboard::Key::Up, "Down", Keyboard::Key::Down,
-            "Numpad0", Keyboard::Key::Numpad0, "Numpad1", Keyboard::Key::Numpad1,
-            "Numpad2", Keyboard::Key::Numpad2, "Numpad3", Keyboard::Key::Numpad3,
-            "Numpad4", Keyboard::Key::Numpad4, "Numpad5", Keyboard::Key::Numpad5,
-            "Numpad6", Keyboard::Key::Numpad6, "Numpad7", Keyboard::Key::Numpad7,
-            "Numpad8", Keyboard::Key::Numpad8, "Numpad9", Keyboard::Key::Numpad9,
-            "F1", Keyboard::Key::F1, "F2", Keyboard::Key::F2,
-            "F3", Keyboard::Key::F3, "F4", Keyboard::Key::F4,
-            "F5", Keyboard::Key::F5, "F6", Keyboard::Key::F6,
-            "F7", Keyboard::Key::F7, "F8", Keyboard::Key::F8,
-            "F9", Keyboard::Key::F9, "F10", Keyboard::Key::F10,
-            "F11", Keyboard::Key::F11, "F12", Keyboard::Key::F12,
-            "F13", Keyboard::Key::F13, "F14", Keyboard::Key::F14,
-            "F15", Keyboard::Key::F15, "Pause", Keyboard::Key::Pause);
-        lua.new_enum("MouseButton",
-            "Left", Mouse::Button::Left,
-            "Right", Mouse::Button::Right,
-            "Middle", Mouse::Button::Middle,
-            "Extra1", Mouse::Button::Extra1,
-            "Extra2", Mouse::Button::Extra2);
-        lua.new_enum("MouseWheel", "Vertical", Mouse::Wheel::Vertical, "Horizontal", Mouse::Wheel::Horizontal);
-        lua.new_enum("JoystickAxis",
-            "X", Joystick::Axis::X, "Y", Joystick::Axis::Y, "Z", Joystick::Axis::Z,
-            "R", Joystick::Axis::R, "U", Joystick::Axis::U, "V", Joystick::Axis::V,
-            "PovX", Joystick::Axis::PovX, "PovY", Joystick::Axis::PovY);
-        lua.new_enum("SensorType",
-            "Accelerometer", Sensor::Type::Accelerometer,
-            "Gyroscope", Sensor::Type::Gyroscope,
-            "Magnetometer", Sensor::Type::Magnetometer,
-            "Gravity", Sensor::Type::Gravity,
-            "UserAcceleration", Sensor::Type::UserAcceleration,
-            "Orientation", Sensor::Type::Orientation);
+        bind_reflected_enum<Keyboard::Key>(lua, "KeyboardKey");
+        bind_reflected_enum<Mouse::Button>(lua, "MouseButton");
+        bind_reflected_enum<Mouse::Wheel>(lua, "MouseWheel");
+        bind_reflected_enum<Joystick::Axis>(lua, "JoystickAxis");
+        bind_reflected_enum<Sensor::Type>(lua, "SensorType");
         auto keyboard = lua.create_named_table("Keyboard");
         keyboard["Key"] = lua.get<sol::object>("KeyboardKey");
         keyboard["is_key_pressed"] = [](Keyboard::Key key) { return Keyboard::isKeyPressed(key); };
@@ -277,81 +194,18 @@ namespace ms::scripting {
         sensor["set_enabled"] = [](Sensor::Type type, bool enabled) { Sensor::setEnabled(type, enabled); };
 
         auto events = lua.create_named_table("sf_events");
-        const auto bind_empty_event = [&lua, &events](const char* alias, const char* typeName, auto typeTag) {
-            using T = decltype(typeTag);
-            lua.new_usertype<T>(typeName, sol::no_constructor);
-            events[alias] = lua.get<sol::object>(typeName);
-        };
-        bind_empty_event("Closed", "ClosedEvent", Event::Closed{});
-        bind_empty_event("FocusLost", "FocusLostEvent", Event::FocusLost{});
-        bind_empty_event("FocusGained", "FocusGainedEvent", Event::FocusGained{});
-        bind_empty_event("MouseEntered", "MouseEnteredEvent", Event::MouseEntered{});
-        bind_empty_event("MouseLeft", "MouseLeftEvent", Event::MouseLeft{});
-
-        lua.new_usertype<Event::Resized>("ResizedEvent", sol::no_constructor, "size", &Event::Resized::size);
-        lua.new_usertype<Event::TextEntered>("TextEnteredEvent", sol::no_constructor, "unicode", &Event::TextEntered::unicode);
-        lua.new_usertype<Event::KeyPressed>("KeyPressedEvent", sol::no_constructor,
-            "code", &Event::KeyPressed::code,
-            "scancode", [](const Event::KeyPressed& event) { return static_cast<int>(event.scancode); },
-            "alt", &Event::KeyPressed::alt,
-            "control", &Event::KeyPressed::control,
-            "shift", &Event::KeyPressed::shift,
-            "system", &Event::KeyPressed::system);
-        lua.new_usertype<Event::KeyReleased>("KeyReleasedEvent", sol::no_constructor,
-            "code", &Event::KeyReleased::code,
-            "scancode", [](const Event::KeyReleased& event) { return static_cast<int>(event.scancode); },
-            "alt", &Event::KeyReleased::alt,
-            "control", &Event::KeyReleased::control,
-            "shift", &Event::KeyReleased::shift,
-            "system", &Event::KeyReleased::system);
-        lua.new_usertype<Event::MouseWheelScrolled>("MouseWheelScrolledEvent", sol::no_constructor,
-            "wheel", &Event::MouseWheelScrolled::wheel,
-            "delta", &Event::MouseWheelScrolled::delta,
-            "position", &Event::MouseWheelScrolled::position);
-        lua.new_usertype<Event::MouseButtonPressed>("MouseButtonPressedEvent", sol::no_constructor,
-            "button", &Event::MouseButtonPressed::button, "position", &Event::MouseButtonPressed::position);
-        lua.new_usertype<Event::MouseButtonReleased>("MouseButtonReleasedEvent", sol::no_constructor,
-            "button", &Event::MouseButtonReleased::button, "position", &Event::MouseButtonReleased::position);
-        lua.new_usertype<Event::MouseMoved>("MouseMovedEvent", sol::no_constructor, "position", &Event::MouseMoved::position);
-        lua.new_usertype<Event::MouseMovedRaw>("MouseMovedRawEvent", sol::no_constructor, "delta", &Event::MouseMovedRaw::delta);
-        lua.new_usertype<Event::JoystickButtonPressed>("JoystickButtonPressedEvent", sol::no_constructor,
-            "joystick_id", &Event::JoystickButtonPressed::joystickId, "button", &Event::JoystickButtonPressed::button);
-        lua.new_usertype<Event::JoystickButtonReleased>("JoystickButtonReleasedEvent", sol::no_constructor,
-            "joystick_id", &Event::JoystickButtonReleased::joystickId, "button", &Event::JoystickButtonReleased::button);
-        lua.new_usertype<Event::JoystickMoved>("JoystickMovedEvent", sol::no_constructor,
-            "joystick_id", &Event::JoystickMoved::joystickId, "axis", &Event::JoystickMoved::axis,
-            "position", &Event::JoystickMoved::position);
-        lua.new_usertype<Event::JoystickConnected>("JoystickConnectedEvent", sol::no_constructor,
-            "joystick_id", &Event::JoystickConnected::joystickId);
-        lua.new_usertype<Event::JoystickDisconnected>("JoystickDisconnectedEvent", sol::no_constructor,
-            "joystick_id", &Event::JoystickDisconnected::joystickId);
-        lua.new_usertype<Event::TouchBegan>("TouchBeganEvent", sol::no_constructor,
-            "finger", &Event::TouchBegan::finger, "position", &Event::TouchBegan::position);
-        lua.new_usertype<Event::TouchMoved>("TouchMovedEvent", sol::no_constructor,
-            "finger", &Event::TouchMoved::finger, "position", &Event::TouchMoved::position);
-        lua.new_usertype<Event::TouchEnded>("TouchEndedEvent", sol::no_constructor,
-            "finger", &Event::TouchEnded::finger, "position", &Event::TouchEnded::position);
-        lua.new_usertype<Event::SensorChanged>("SensorChangedEvent", sol::no_constructor,
-            "type", &Event::SensorChanged::type, "value", &Event::SensorChanged::value);
-
-        events["Resized"] = lua.get<sol::object>("ResizedEvent");
-        events["TextEntered"] = lua.get<sol::object>("TextEnteredEvent");
-        events["KeyPressed"] = lua.get<sol::object>("KeyPressedEvent");
-        events["KeyReleased"] = lua.get<sol::object>("KeyReleasedEvent");
-        events["MouseWheelScrolled"] = lua.get<sol::object>("MouseWheelScrolledEvent");
-        events["MouseButtonPressed"] = lua.get<sol::object>("MouseButtonPressedEvent");
-        events["MouseButtonReleased"] = lua.get<sol::object>("MouseButtonReleasedEvent");
-        events["MouseMoved"] = lua.get<sol::object>("MouseMovedEvent");
-        events["MouseMovedRaw"] = lua.get<sol::object>("MouseMovedRawEvent");
-        events["JoystickButtonPressed"] = lua.get<sol::object>("JoystickButtonPressedEvent");
-        events["JoystickButtonReleased"] = lua.get<sol::object>("JoystickButtonReleasedEvent");
-        events["JoystickMoved"] = lua.get<sol::object>("JoystickMovedEvent");
-        events["JoystickConnected"] = lua.get<sol::object>("JoystickConnectedEvent");
-        events["JoystickDisconnected"] = lua.get<sol::object>("JoystickDisconnectedEvent");
-        events["TouchBegan"] = lua.get<sol::object>("TouchBeganEvent");
-        events["TouchMoved"] = lua.get<sol::object>("TouchMovedEvent");
-        events["TouchEnded"] = lua.get<sol::object>("TouchEndedEvent");
-        events["SensorChanged"] = lua.get<sol::object>("SensorChangedEvent");
+        bind_reflected_events<
+            Event::Closed, Event::FocusLost, Event::FocusGained, Event::MouseEntered, Event::MouseLeft,
+            Event::Resized, Event::TextEntered, Event::KeyPressed, Event::KeyReleased,
+            Event::MouseWheelScrolled, Event::MouseButtonPressed, Event::MouseButtonReleased,
+            Event::MouseMoved, Event::MouseMovedRaw, Event::JoystickButtonPressed,
+            Event::JoystickButtonReleased, Event::JoystickMoved, Event::JoystickConnected,
+            Event::JoystickDisconnected, Event::TouchBegan, Event::TouchMoved, Event::TouchEnded,
+            Event::SensorChanged>(lua, events);
+        lua["KeyPressedEvent"]["scancode"] =
+            [](const Event::KeyPressed& event) { return static_cast<int>(event.scancode); };
+        lua["KeyReleasedEvent"]["scancode"] =
+            [](const Event::KeyReleased& event) { return static_cast<int>(event.scancode); };
 
         auto sf = lua.create_named_table("sf");
         for (const char* name : {"Vector2f", "Vector2i", "Vector2u", "Vector3f", "FloatRect", "IntRect",
