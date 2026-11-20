@@ -111,7 +111,7 @@ namespace ms::scripting {
         static constexpr auto enumerators = std::define_static_array(std::meta::enumerators_of(^^Enum));
 
         [&]<std::size_t... Indices>(std::index_sequence<Indices...>) {
-            lua.template new_enum<Enum, false>(
+            lua.new_enum<Enum, false>(
                 name,
                 {std::pair<sol::string_view, Enum>{std::meta::identifier_of(enumerators[Indices]), [:enumerators[Indices]:]}...});
         }(std::make_index_sequence<enumerators.size()>{});

@@ -1,0 +1,12 @@
+{
+  "id": "pulse_bolt",
+  "name": "Pulse Bolt",
+  "type": "projectile",
+  "icon": "Fire-projectile",
+  "projectile_sprite": "Fire-projectile",
+  "stats": {
+    "damage": 12,
+    "speed": 500,
+    "life_time": 5
+  }
+}

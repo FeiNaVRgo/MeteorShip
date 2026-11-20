@@ -1,0 +1,22 @@
+{
+  "id": "pulse_turret",
+  "name": "Pulse Turret",
+  "icon": "JetFighter-Var3-Spritesheet",
+  "spell_slots": 3,
+  "script": "scripts/lua/turrets/pulse_turret.lua",
+  "on_fire": "pulse_turret_on_fire",
+  "stats": {
+    "spells_per_cast": 1,
+    "cast_delay": 0.1,
+    "recharge_time": 0.35,
+    "mana_max": 100,
+    "mana_charge_speed": 10,
+    "capacity": 3,
+    "speed_multiplier": 1
+  },
+  "spells": [
+    "pulse_bolt",
+    "knockback_modifier",
+    "pulse_bolt"
+  ]
+}

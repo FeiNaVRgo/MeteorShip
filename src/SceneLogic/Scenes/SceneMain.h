@@ -9,6 +9,7 @@
 
 #include "Inventory/Inventory.h"
 #include "SceneBase.h"
+#include "Utility/CustomEntityLoader.h"
 
 namespace ms::scene_logic::scenes {
     class SceneMain : public SceneBase {
@@ -16,6 +17,7 @@ namespace ms::scene_logic::scenes {
             inventory::DefaultSpellSlotCount,
             inventory::DefaultTurretMountCount
         };
+        std::vector<utility::CustomEnemyDefinition> enemyDefinitions;
         float simulationAccumulator = 0.f;
 
     public:
@@ -30,6 +32,7 @@ namespace ms::scene_logic::scenes {
         void createPlayer();
 
         void createEnemy();
+        void createEnemy(const utility::CustomEnemyDefinition& definition);
 
     };
 }

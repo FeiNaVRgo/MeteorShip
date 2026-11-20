@@ -21,6 +21,9 @@
 #include <behaviortree_cpp/bt_factory.h>
 #include <behaviortree_cpp/xml_parsing.h>
 #include <pybind11/embed.h>
+#include <sol/sol.hpp>
+#include <filesystem>
+#include <stdexcept>
 #include <string>
 
 #include "BTNodes/IsPlayerVisible.h"
@@ -28,6 +31,7 @@
 #include "BTNodes/MoveTowards.h"
 #include "BTNodes/RandomMovement.h"
 #include "BTNodes/RotateTowards.h"
+#include "BTNodes/LuaBehaviorNode.h"
 #include "Components/BehaviorTree.h"
 #include "Components/BoundingBox.h"
 #include "Components/CollisionShape.h"
@@ -57,6 +61,7 @@ namespace ms
 
         lua.open_libraries(sol::lib::base, sol::lib::package);
         scripting::lua_bind(lua, *this);
+        bt_nodes::registerLuaBehaviorNodes(factory, *this);
 
         {
             //here is where we register all of our nodes for behavior
@@ -159,7 +164,7 @@ namespace ms
         updateFunc();
         */
 
-        lua.script_file("scripts/lua/main.lua");
+        loadLuaScript("scripts/lua/main.lua");
 
 
         while (mainWindow.isOpen()) {
@@ -212,5 +217,20 @@ namespace ms
         (void)mainWindow.setActive(true);
         nk_sfml_shutdown();
         mainWindow.close();
+    }
+
+    void Game::loadLuaScript(const std::string& path) {
+        const std::filesystem::path scriptPath(path);
+        if (!std::filesystem::is_regular_file(scriptPath)) {
+            throw std::runtime_error("Lua script does not exist: " + path);
+        }
+        const auto normalizedPath = std::filesystem::weakly_canonical(scriptPath).string();
+        if (loadedLuaScripts.contains(normalizedPath)) return;
+        try {
+            lua.script_file(normalizedPath);
+        } catch (const sol::error& error) {
+            throw std::runtime_error("Failed to load Lua script '" + path + "': " + error.what());
+        }
+        loadedLuaScripts.insert(normalizedPath);
     }
 } // ms

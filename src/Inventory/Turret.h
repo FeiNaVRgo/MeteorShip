@@ -2,6 +2,7 @@
 #define METEORSHIP_TURRET_H
 
 #include <cstddef>
+#include <functional>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -53,6 +54,7 @@ namespace ms::inventory {
         std::size_t deckCursor = 0;
         std::mt19937 randomEngine{std::random_device{}()}; //this is bs btw generation of random  numbers should be delegated to its own class (singleton i think)
         TurretTargetMode targetMode = TurretTargetMode::Automatic;
+        std::function<bool(World&, ecs::Entity, sf::Vector2f, float)> onFire;
 
     public:
 
@@ -117,6 +119,9 @@ namespace ms::inventory {
         }
         void shoot(World& world, ecs::Entity owner, sf::Vector2f origin,
                    float aimAngleRadians);
+        void setOnFireHook(std::function<bool(World&, ecs::Entity, sf::Vector2f, float)> hook) {
+            onFire = std::move(hook);
+        }
         void resetDeck();
         std::size_t addSpellSlot();
         bool removeSpellSlot(std::size_t index);

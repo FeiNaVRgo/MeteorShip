@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
+#include <unordered_map>
 #include <utility>
 
 #include <boost/json.hpp>
@@ -33,6 +35,7 @@
 #include "Systems/Player/TurretSystem.h"
 #include "Systems/SpatialHashing/SpatialHash.h"
 #include "Systems/Drawing/DrawingSystem.h"
+#include "Utility/CustomEntityLoader.h"
 
 namespace ms::scene_logic::scenes {
     namespace {
@@ -85,30 +88,38 @@ namespace ms::scene_logic::scenes {
         ui.root = std::make_unique<ui::UINode>();
 
         inventory.buildUI(*ui.root);
-        //for testing ig
-        inventory.storeTurret(inventory::Turret{
-            "turret numero jeden",
-            this->game.getAssetManager().spriteMap.at("JetFighter-Var3-Spritesheet").sprite,
-            7
-        });
-
-        auto& assetMgr = this->game.getAssetManager();
-        std::optional<utility::AnimatedSprite> bulletSprite;
-        std::optional<sf::Sprite> bulletIcon;
-        auto bulletIt = assetMgr.spriteMap.find("Fire-projectile");
-        if (bulletIt != assetMgr.spriteMap.end()) {
-            bulletSprite = bulletIt->second;
-            bulletIcon = bulletIt->second.sprite;
-        }
-
-        auto deck = inventory::SpellFactory::makeExampleDeck();
-        for (auto& spell : deck) {
-            if (spell.isProjectile() && bulletSprite.has_value()) {
-                spell.setProjectileSprite(*bulletSprite);
-                spell.setIcon(*bulletIcon);
+        utility::CustomEntityLoader loader{this->game};
+        std::unordered_map<std::string, inventory::Spell> spellsById;
+        for (auto& definition : loader.loadSpells()) {
+            spellsById.emplace(definition.id, definition.spell);
+            if (!inventory.storeSpell(std::move(definition.spell))) {
+                throw std::runtime_error("The custom spell inventory exceeds its available slots.");
             }
-            inventory.storeSpell(std::move(spell));
         }
+        std::size_t turretIndex = 0;
+        for (auto& definition : loader.loadTurrets()) {
+            if (turretIndex >= inventory.turretMountCount()) {
+                throw std::runtime_error("There are more custom turrets than available player mounts.");
+            }
+            if (!inventory.setTurret(turretIndex, std::move(definition.turret))) {
+                throw std::runtime_error("Failed to mount custom turret: " + definition.id);
+            }
+            for (std::size_t slot = 0; slot < definition.spells.size(); ++slot) {
+                const auto spell = spellsById.find(definition.spells[slot]);
+                if (spell == spellsById.end()) {
+                    throw std::runtime_error("Turret '" + definition.id + "' references unknown spell '" +
+                                             definition.spells[slot] + "'.");
+                }
+                if (slot >= inventory.turretSpellSlotCount(turretIndex) ||
+                    !inventory.setSpell({inventory::SlotCollection::TurretSpell, slot, turretIndex},
+                                        spell->second)) {
+                    throw std::runtime_error("Turret '" + definition.id +
+                                             "' does not have enough spell slots for its deck.");
+                }
+            }
+            ++turretIndex;
+        }
+        enemyDefinitions = loader.loadEnemies();
     }
 
     void SceneMain::init() {
@@ -116,9 +127,7 @@ namespace ms::scene_logic::scenes {
             game.getEventHandler(),
             [this](Event::RemoveEntity const& e) { world->getECS().destroyEntity(e.entity); });
         createPlayer();
-        for (int i = 0; i < 1; i++) {
-            createEnemy();
-        }
+        for (const auto& definition : enemyDefinitions) createEnemy(definition);
     }
 
     void SceneMain::destroy() {
@@ -202,6 +211,13 @@ namespace ms::scene_logic::scenes {
     }
 
     void SceneMain::createEnemy() {
+        if (enemyDefinitions.empty()) {
+            throw std::runtime_error("No custom enemy definitions were loaded.");
+        }
+        createEnemy(enemyDefinitions.front());
+    }
+
+    void SceneMain::createEnemy(const utility::CustomEnemyDefinition& definition) {
         auto const enemy = world->getECS().createEntity();
         std::size_t enemyIndex = 0;
         world->getECS().view<components::Enemy>().each(
@@ -210,7 +226,9 @@ namespace ms::scene_logic::scenes {
             });
 
         world->getECS().addComponent<components::Enemy>(enemy);
-        world->getECS().addComponent<components::BehaviorTree>(enemy, create_tree_for_basic_enemy(game, enemy));
+        world->getECS().addComponent<components::BehaviorTree>(
+            enemy, utility::CustomEntityLoader::createEnemyBehaviorTree(
+                       game, world, enemy, definition.behaviorTree));
 
         components::Transform transform{};
         transform.setRotation(sf::degrees(0));
@@ -228,7 +246,7 @@ namespace ms::scene_logic::scenes {
         world->getECS().addComponent<components::Transform>(enemy, transform);
 
         components::Drawable drawable{};
-        drawable.sprite = game.getAssetManager().spriteMap.at("JetFighter-Var2-Spritesheet");
+        drawable.sprite = game.getAssetManager().spriteMap.at(definition.sprite);
         world->getECS().addComponent<components::Drawable>(enemy, drawable);
 
         components::Rigidbody rigidbody{};

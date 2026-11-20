@@ -6,6 +6,8 @@
 #define METEORSHIP_GAME_H
 
 #include <memory>
+#include <string>
+#include <unordered_set>
 
 #include <behaviortree_cpp/blackboard.h>
 #include <behaviortree_cpp/bt_factory.h>
@@ -35,6 +37,7 @@ namespace ms {
         nk_font_atlas *atlas;
         BT::Blackboard::Ptr globalBlackboard;
         BT::BehaviorTreeFactory factory;
+        std::unordered_set<std::string> loadedLuaScripts;
         bool closeRequested = false;
 
     public:
@@ -53,6 +56,8 @@ namespace ms {
         scene_logic::SceneManager &getSceneManager() { return sceneManager; }
         systems::OpenCLCollisionDetector &getCollisionDetector() { return collisionDetector; }
         BT::BehaviorTreeFactory &getBehaviorTreeFactory() { return factory; }
+        sol::state& getLuaState() { return lua; }
+        void loadLuaScript(const std::string& path);
 
         void update(sf::Time const &elapsed) const;
 

@@ -1,53 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root BTCPP_format="4">
   <BehaviorTree ID="normal_enemy">
-    <Sequence>
-      <Fallback>
-        <IsPlayerVisible player_visible="{player_visible}"
-                         sight_range="300.0"
-                         bt_context="{bt_context}"
-                         game="{@game_ptr}"/>
-        <ForceFailure>
-          <RandomMovement bt_context="{bt_context}"
-                          game="{@game_ptr}"/>
-        </ForceFailure>
-      </Fallback>
-      <MoveForward speed="30"
+    <Fallback>
+      <Sequence>
+        <LuaCondition script="scripts/lua/enemies/scout.lua"
+                      function="scout_has_target"
+                      parameters="json:{&quot;sight_range&quot;:300}"
+                      bt_context="{bt_context}"/>
+        <LuaAction script="scripts/lua/enemies/scout.lua"
+                   function="scout_chase"
+                   parameters="json:{&quot;speed&quot;:45}"
                    bt_context="{bt_context}"/>
-      <RotateTowards speed="60"
-                     bt_context="{bt_context}"/>
-    </Sequence>
+      </Sequence>
+      <LuaAction script="scripts/lua/enemies/scout.lua"
+                 function="scout_patrol"
+                 bt_context="{bt_context}"/>
+    </Fallback>
   </BehaviorTree>
 
-  <!-- Description of Node Models (used by Groot) -->
+  <!-- Node models for Groot2 -->
   <TreeNodesModel>
-    <Condition ID="IsPlayerVisible">
-      <output_port name="player_visible"
-                   type="bool"/>
-      <input_port name="sight_range"
-                  type="float"/>
+    <Condition ID="LuaCondition">
       <input_port name="bt_context"
                   type="ms::bt_nodes::BTContext"/>
-      <input_port name="game"
-                  type="ms::Game*"/>
+      <input_port name="script"
+                  type="std::string"/>
+      <input_port name="function"
+                  type="std::string"/>
+      <input_port name="parameters"
+                  type="std::string"/>
     </Condition>
-    <Action ID="MoveForward">
-      <input_port name="speed"
-                  type="float"/>
+    <Action ID="LuaAction">
       <input_port name="bt_context"
                   type="ms::bt_nodes::BTContext"/>
-    </Action>
-    <Action ID="RandomMovement">
-      <input_port name="bt_context"
-                  type="ms::bt_nodes::BTContext"/>
-      <input_port name="game"
-                  type="ms::Game*"/>
-    </Action>
-    <Action ID="RotateTowards">
-      <input_port name="speed"
-                  type="float"/>
-      <input_port name="bt_context"
-                  type="ms::bt_nodes::BTContext"/>
+      <input_port name="script"
+                  type="std::string"/>
+      <input_port name="function"
+                  type="std::string"/>
+      <input_port name="parameters"
+                  type="std::string"/>
     </Action>
   </TreeNodesModel>
 

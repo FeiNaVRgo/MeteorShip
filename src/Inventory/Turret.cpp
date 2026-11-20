@@ -48,6 +48,7 @@ namespace ms::inventory {
     void Turret::shoot(World& world, const ecs::Entity owner,
                        const sf::Vector2f origin, const float aimAngleRadians) {
         if (!readyToShoot()) return;
+        if (onFire && !onFire(world, owner, origin, aimAngleRadians)) return;
 
         Payload payload(this);
         auto& vec_payloads = payload.gatherPayloadedSpells();

@@ -1,0 +1,10 @@
+{
+  "id": "knockback_modifier",
+  "name": "Knockback Modifier",
+  "type": "modifier",
+  "script": "scripts/lua/spells/knockback_modifier.lua",
+  "stats": {},
+  "behavior": {
+    "on_collision": "knockback_modifier_on_collision"
+  }
+}
