@@ -5,16 +5,19 @@
       <Sequence>
         <LuaCondition script="scripts/lua/enemies/scout.lua"
                       function="scout_has_target"
-                      parameters="json:{&quot;sight_range&quot;:300}"
-                      bt_context="{bt_context}"/>
+                      parameters=""
+                      bt_context="{bt_context}"
+                      bt_parameters="{bt_parameters}"/>
         <LuaAction script="scripts/lua/enemies/scout.lua"
                    function="scout_chase"
-                   parameters="json:{&quot;speed&quot;:45}"
-                   bt_context="{bt_context}"/>
+                   parameters=""
+                   bt_context="{bt_context}"
+                   bt_parameters="{bt_parameters}"/>
       </Sequence>
       <LuaAction script="scripts/lua/enemies/scout.lua"
                  function="scout_patrol"
-                 bt_context="{bt_context}"/>
+                 bt_context="{bt_context}"
+                 bt_parameters="{bt_parameters}"/>
     </Fallback>
   </BehaviorTree>
 

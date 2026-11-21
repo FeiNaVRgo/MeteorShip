@@ -2,5 +2,9 @@
   "id": "scout",
   "name": "Scout",
   "sprite": "JetFighter-Var2-Spritesheet",
-  "behavior_tree": "BTreeXML/normal_enemy.xml"
+  "behavior_tree": "BTreeXML/normal_enemy.xml",
+  "parameters": {
+    "speed": 500,
+    "sight_range": 300
+  }
 }

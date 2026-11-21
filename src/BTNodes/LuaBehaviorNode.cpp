@@ -56,16 +56,33 @@ namespace ms::bt_nodes {
             return object.as<sol::protected_function>();
         }
 
-        sol::table getParameters(sol::state& lua, const std::string& encoded) {
-            constexpr std::string_view prefix = "json:";
-            const std::string_view jsonText = encoded.starts_with(prefix)
-                ? std::string_view(encoded).substr(prefix.size())
-                : std::string_view(encoded);
-            const auto parameters = boost::json::parse(jsonText);
+        sol::table parseJsonParameters(sol::state& lua, const std::string& jsonString) {
+            const auto parameters = boost::json::parse(jsonString);
             if (!parameters.is_object()) {
                 throw std::runtime_error("Lua behavior parameters must be a JSON object.");
             }
             return toLua(lua, parameters).as<sol::table>();
+        }
+
+        sol::table getParameters(sol::state& lua, const std::string& blackboardParams,
+                                 const std::string& portParams) {
+            // Start with entity-level parameters from the blackboard
+            sol::table result = parseJsonParameters(lua, blackboardParams);
+            // If the XML port also specifies parameters, merge them in (override)
+            if (!portParams.empty() && portParams != "json:{}") {
+                constexpr std::string_view prefix = "json:";
+                const std::string_view jsonText = portParams.starts_with(prefix)
+                    ? std::string_view(portParams).substr(prefix.size())
+                    : std::string_view(portParams);
+                const auto overrides = boost::json::parse(jsonText);
+                if (overrides.is_object()) {
+                    sol::table overrideTable = toLua(lua, overrides).as<sol::table>();
+                    for (auto& [key, value] : overrideTable) {
+                        result[key] = value;
+                    }
+                }
+            }
+            return result;
         }
 
         BT::NodeStatus luaStatus(const sol::protected_function_result& result,
@@ -93,6 +110,7 @@ namespace ms::bt_nodes {
             static BT::PortsList providedPorts() {
                 return {
                     BT::InputPort<BTContext>("bt_context"),
+                    BT::InputPort<std::string>("bt_parameters"),
                     BT::InputPort<std::string>("script"),
                     BT::InputPort<std::string>("function"),
                     BT::InputPort<std::string>("parameters", "json:{}")
@@ -101,6 +119,7 @@ namespace ms::bt_nodes {
 
             BT::NodeStatus run() {
                 const auto context = getInput<BTContext>("bt_context");
+                const auto bt_parameters = getInput<std::string>("bt_parameters");
                 const auto script = getInput<std::string>("script");
                 const auto functionName = getInput<std::string>("function");
                 const auto parameters = getInput<std::string>("parameters");
@@ -111,7 +130,7 @@ namespace ms::bt_nodes {
                 auto& lua = game.getLuaState();
                 auto function = getFunction(lua, functionName.value());
                 auto luaContext = makeContext(lua, context.value());
-                auto luaParameters = getParameters(lua, parameters.value());
+                auto luaParameters = getParameters(lua, bt_parameters.value(),parameters.value());
                 return luaStatus(function(luaContext, luaParameters), functionName.value());
             }
 
@@ -130,6 +149,7 @@ namespace ms::bt_nodes {
             static BT::PortsList providedPorts() {
                 return {
                     BT::InputPort<BTContext>("bt_context"),
+                    BT::InputPort<std::string>("bt_parameters"),
                     BT::InputPort<std::string>("script"),
                     BT::InputPort<std::string>("function"),
                     BT::InputPort<std::string>("parameters", "json:{}")
@@ -138,6 +158,7 @@ namespace ms::bt_nodes {
 
             BT::NodeStatus tick() override {
                 const auto context = getInput<BTContext>("bt_context");
+                const auto bt_parameters = getInput<std::string>("bt_parameters");
                 const auto script = getInput<std::string>("script");
                 const auto functionName = getInput<std::string>("function");
                 const auto parameters = getInput<std::string>("parameters");
@@ -148,7 +169,7 @@ namespace ms::bt_nodes {
                 auto& lua = game.getLuaState();
                 auto function = getFunction(lua, functionName.value());
                 auto luaContext = makeContext(lua, context.value());
-                auto luaParameters = getParameters(lua, parameters.value());
+                auto luaParameters = getParameters(lua,bt_parameters.value(), parameters.value());
                 const auto result = function(luaContext, luaParameters);
                 if (!result.valid()) {
                     const sol::error error = result;

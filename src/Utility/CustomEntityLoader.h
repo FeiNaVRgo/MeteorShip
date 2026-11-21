@@ -34,6 +34,7 @@ namespace ms::utility {
         std::string name;
         std::string sprite;
         std::string behaviorTree;
+        boost::json::object parameters;
     };
 
     class CustomEntityLoader {
@@ -48,7 +49,7 @@ namespace ms::utility {
 
         static components::BehaviorTree createEnemyBehaviorTree(
             Game& game, const std::shared_ptr<World>& world, ecs::Entity entity,
-            const std::string& behaviorTree);
+            const std::string& behaviorTree, const boost::json::object& parameters);
     };
 }
 

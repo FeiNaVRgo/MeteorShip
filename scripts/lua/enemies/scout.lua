@@ -21,7 +21,7 @@ function scout_chase(context, parameters)
     local target = ecs:get_transform(context.player_entity).position
     local direction = target - position
     if direction:length() > 0 then
-        ecs:get_rigidbody(context.entity).velocity = direction:normalized() * parameters.speed
+        ecs:get_rigidbody(context.entity).velocity = direction:normalized() * parameters.speed * context.delta_time
     else
         ecs:get_rigidbody(context.entity).velocity = sf.Vector2f(0, 0)
     end

@@ -447,17 +447,21 @@ namespace ms::utility {
             if (!std::filesystem::is_regular_file(behaviorTree)) {
                 throw std::runtime_error("Enemy behavior tree XML does not exist: " + behaviorTree);
             }
-            if (game.getAssetManager().spriteMap.find(sprite) == game.getAssetManager().spriteMap.end()) {
+            if (!game.getAssetManager().spriteMap.contains(sprite)) {
                 throw std::runtime_error("Unknown enemy sprite asset '" + sprite + "' in " + path.string());
             }
-            definitions.push_back({id, name, sprite, behaviorTree});
+            json::object parameters;
+            if (const auto* value = find(definition, "parameters")) {
+                parameters = objectValue(*value, "parameters", path);
+            }
+            definitions.push_back({id, name, sprite, behaviorTree, std::move(parameters)});
         }
         return definitions;
     }
 
     components::BehaviorTree CustomEntityLoader::createEnemyBehaviorTree(
         Game& game, const std::shared_ptr<World>& world, const ecs::Entity entity,
-        const std::string& behaviorTree) {
+        const std::string& behaviorTree, const boost::json::object& parameters) {
         auto blackboard = BT::Blackboard::create(game.getGlobalBlackboard());
         std::optional<ecs::Entity> playerEntity;
         world->getECS().view<components::Player, components::Transform>().each(
@@ -470,6 +474,7 @@ namespace ms::utility {
             .entity = entity,
             .playerEntity = playerEntity
         });
+        blackboard->set("bt_parameters", boost::json::serialize(boost::json::value(parameters)));
         auto tree = game.getBehaviorTreeFactory().createTreeFromFile(behaviorTree, blackboard);
         return {
             .BTTree = std::move(tree),

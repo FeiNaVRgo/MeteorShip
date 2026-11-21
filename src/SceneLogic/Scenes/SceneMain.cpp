@@ -228,7 +228,7 @@ namespace ms::scene_logic::scenes {
         world->getECS().addComponent<components::Enemy>(enemy);
         world->getECS().addComponent<components::BehaviorTree>(
             enemy, utility::CustomEntityLoader::createEnemyBehaviorTree(
-                       game, world, enemy, definition.behaviorTree));
+                       game, world, enemy, definition.behaviorTree, definition.parameters));
 
         components::Transform transform{};
         transform.setRotation(sf::degrees(0));
