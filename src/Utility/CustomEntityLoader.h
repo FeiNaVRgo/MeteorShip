@@ -43,9 +43,9 @@ namespace ms::utility {
     public:
         explicit CustomEntityLoader(Game& game) : game(game) {}
 
-        std::vector<CustomSpellDefinition> loadSpells() const;
-        std::vector<CustomTurretDefinition> loadTurrets() const;
-        std::vector<CustomEnemyDefinition> loadEnemies() const;
+        [[nodiscard]] std::vector<CustomSpellDefinition> loadSpells() const;
+        [[nodiscard]] std::vector<CustomTurretDefinition> loadTurrets() const;
+        [[nodiscard]] std::vector<CustomEnemyDefinition> loadEnemies() const;
 
         static components::BehaviorTree createEnemyBehaviorTree(
             Game& game, const std::shared_ptr<World>& world, ecs::Entity entity,

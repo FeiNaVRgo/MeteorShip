@@ -3,46 +3,51 @@
   <BehaviorTree ID="normal_enemy">
     <Fallback>
       <Sequence>
-        <LuaCondition script="scripts/lua/enemies/scout.lua"
+        <LuaCondition parameters=""
+                      script="scripts/lua/enemies/scout.lua"
+                      bt_parameters="{bt_parameters}"
                       function="scout_has_target"
-                      parameters=""
-                      bt_context="{bt_context}"
-                      bt_parameters="{bt_parameters}"/>
-        <LuaAction script="scripts/lua/enemies/scout.lua"
+                      bt_context="{bt_context}"/>
+        <LuaAction parameters=""
+                   script="scripts/lua/enemies/scout.lua"
+                   bt_parameters="{bt_parameters}"
                    function="scout_chase"
-                   parameters=""
-                   bt_context="{bt_context}"
-                   bt_parameters="{bt_parameters}"/>
+                   bt_context="{bt_context}"/>
       </Sequence>
-      <LuaAction script="scripts/lua/enemies/scout.lua"
+      <LuaAction parameters=""
+                 script="scripts/lua/enemies/scout.lua"
+                 bt_parameters="{bt_parameters}"
                  function="scout_patrol"
-                 bt_context="{bt_context}"
-                 bt_parameters="{bt_parameters}"/>
+                 bt_context="{bt_context}"/>
     </Fallback>
   </BehaviorTree>
 
-  <!-- Node models for Groot2 -->
+  <!-- Description of Node Models (used by Groot) -->
   <TreeNodesModel>
-    <Condition ID="LuaCondition">
-      <input_port name="bt_context"
-                  type="ms::bt_nodes::BTContext"/>
-      <input_port name="script"
-                  type="std::string"/>
-      <input_port name="function"
-                  type="std::string"/>
-      <input_port name="parameters"
-                  type="std::string"/>
-    </Condition>
     <Action ID="LuaAction">
-      <input_port name="bt_context"
-                  type="ms::bt_nodes::BTContext"/>
+      <input_port name="parameters"
+                  type="std::string">json:{}</input_port>
       <input_port name="script"
+                  type="std::string"/>
+      <input_port name="bt_parameters"
                   type="std::string"/>
       <input_port name="function"
                   type="std::string"/>
-      <input_port name="parameters"
-                  type="std::string"/>
+      <input_port name="bt_context"
+                  type="ms::bt_nodes::BTContext"/>
     </Action>
+    <Condition ID="LuaCondition">
+      <input_port name="parameters"
+                  type="std::string">json:{}</input_port>
+      <input_port name="script"
+                  type="std::string"/>
+      <input_port name="bt_parameters"
+                  type="std::string"/>
+      <input_port name="function"
+                  type="std::string"/>
+      <input_port name="bt_context"
+                  type="ms::bt_nodes::BTContext"/>
+    </Condition>
   </TreeNodesModel>
 
 </root>
