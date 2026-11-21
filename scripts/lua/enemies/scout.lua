@@ -28,7 +28,8 @@ function scout_chase(context, parameters)
     return "SUCCESS"
 end
 
-function scout_patrol(context, _)
-    context.world.ecs:get_rigidbody(context.entity).velocity = sf.Vector2f(0, 18)
+function scout_patrol(context, parameters)
+    --somehow this piece of code crashes lua, something with sf::Vector2f, idk why its crashing lowk
+    --context.world.ecs:get_rigidbody(context.entity).velocity = sf.Vector2f(0.0, 18.0)
     return "SUCCESS"
 end

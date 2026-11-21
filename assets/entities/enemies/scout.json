@@ -4,7 +4,7 @@
   "sprite": "JetFighter-Var2-Spritesheet",
   "behavior_tree": "BTreeXML/normal_enemy.xml",
   "parameters": {
-    "speed": 500,
+    "speed": 2000,
     "sight_range": 300
   }
 }

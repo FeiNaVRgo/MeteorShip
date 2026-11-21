@@ -13,6 +13,8 @@
                    bt_parameters="{bt_parameters}"
                    function="scout_chase"
                    bt_context="{bt_context}"/>
+        <RotateTowards speed="200"
+                       bt_context="{bt_context}"/>
       </Sequence>
       <LuaAction parameters=""
                  script="scripts/lua/enemies/scout.lua"
@@ -48,6 +50,12 @@
       <input_port name="bt_context"
                   type="ms::bt_nodes::BTContext"/>
     </Condition>
+    <Action ID="RotateTowards">
+      <input_port name="speed"
+                  type="float"/>
+      <input_port name="bt_context"
+                  type="ms::bt_nodes::BTContext"/>
+    </Action>
   </TreeNodesModel>
 
 </root>

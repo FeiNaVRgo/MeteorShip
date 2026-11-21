@@ -127,7 +127,12 @@ namespace ms::scene_logic::scenes {
             game.getEventHandler(),
             [this](Event::RemoveEntity const& e) { world->getECS().destroyEntity(e.entity); });
         createPlayer();
-        for (const auto& definition : enemyDefinitions) createEnemy(definition);
+        const auto it = std::ranges::find_if(enemyDefinitions, [](auto const& p) {
+            return p.id == "scout";
+        });
+        for (int i = 0 ; i < 20; i++) {
+            createEnemy(*it);
+        }
     }
 
     void SceneMain::destroy() {
