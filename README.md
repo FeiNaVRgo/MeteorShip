@@ -98,6 +98,7 @@ pacman -S --needed \
     mingw-w64-ucrt-x86_64-cmake \
     mingw-w64-ucrt-x86_64-ninja \
     mingw-w64-ucrt-x86_64-python \
+    mingw-w64-ucrt-x86_64-pybind11 \
     mingw-w64-ucrt-x86_64-opencl-headers \
     mingw-w64-ucrt-x86_64-opencl-icd-loader \
     zip unzip tar pkg-config
