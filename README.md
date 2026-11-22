@@ -100,23 +100,11 @@ pacman -S --needed \
     mingw-w64-ucrt-x86_64-python \
     mingw-w64-ucrt-x86_64-pybind11 \
     mingw-w64-ucrt-x86_64-opencl-headers \
-    mingw-w64-ucrt-x86_64-opencl-icd-loader \
+    mingw-w64-ucrt-x86_64-opencl-icd \
     zip unzip tar pkg-config
 ```
 
-##### 4. Verify GCC 16+ Installation
-Ensure GCC 16 is active:
-```bash
-g++ --version
-# Output should indicate GCC 16.x or newer
-```
-Verify that the C++26 reflection flag is recognized:
-```bash
-g++ -std=c++26 -freflection -dM -E - < /dev/null
-```
-*(If the official MSYS2 repository has not promoted GCC 16 to the main channel yet, install a GCC 16 snapshot package or compile GCC trunk with `--enable-languages=c,c++`).*
-
-##### 5. Install and Bootstrap vcpkg for MinGW
+##### 4. Install and Bootstrap vcpkg for MinGW
 In your **MSYS2 UCRT64** shell:
 ```bash
 # Clone vcpkg to C:\vcpkg (accessible as /c/vcpkg in MSYS2)
@@ -128,7 +116,7 @@ cd /c/vcpkg
 export VCPKG_ROOT=/c/vcpkg
 ```
 
-##### 6. Configure and Build MeteorShip
+##### 5. Configure and Build MeteorShip
 Navigate to your cloned MeteorShip repository:
 ```bash
 cd /c/path/to/MeteorShip
@@ -144,7 +132,8 @@ cmake -B build -S . \
   -DVCPKG_HOST_TRIPLET=x64-mingw-dynamic \
   -DCMAKE_C_COMPILER=gcc \
   -DCMAKE_CXX_COMPILER=g++ \
-  -DCMAKE_BUILD_TYPE=Release
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_MAKE_PROGRAM="/ucrt64/bin/ninja"
 ```
 
 Compile the project:
@@ -152,7 +141,7 @@ Compile the project:
 cmake --build build --config Release -j$(nproc)
 ```
 
-##### 7. Running the Game on Windows
+##### 6. Running the Game on Windows
 Launch directly from the MSYS2 UCRT64 terminal:
 ```bash
 cd build
