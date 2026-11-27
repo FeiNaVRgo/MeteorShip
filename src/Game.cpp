@@ -47,17 +47,19 @@
 #include "SceneLogic/Scenes/SceneMainMenu.h"
 #include "SceneLogic/Scenes/SceneSettings.h"
 #include "../Bindings/LuaBinding/lua_bindings.h"
+#include "Utility/SaveState/SavePath.h"
 
 namespace py = pybind11;
 
 namespace ms
 {
     Game::Game(): worldBox(),
-                  settings(24, 8, 4, 3, 3),
-                  mainWindow(sf::VideoMode({800, 600}), "My window", sf::Style::Default, sf::State::Windowed, settings),
+                  sfml_ctx_settings(24, 8, 4, 3, 3),
+                  mainWindow(sf::VideoMode({800, 600}), "My window", sf::Style::Default, sf::State::Windowed, sfml_ctx_settings),
                   eventHandler(*this),
                   sceneManager(worldBox.getWorlds()),
-                  globalBlackboard(BT::Blackboard::create()) {
+                  globalBlackboard(BT::Blackboard::create()),
+                  settings(utility::save_dir("MeteorShip").value_or({}) / "config" / "settings.json") {
 
         lua.open_libraries(sol::lib::base, sol::lib::package);
         scripting::lua_bind(lua, *this);
@@ -115,6 +117,27 @@ namespace ms
         worldBox.registerComponent<components::Scene>();
 
         sceneManager.changeScene("main_menu");
+
+        // should SaveState be based on scenes? worlds?
+        /*
+        if (st.load_from_file("path").has_value()) {
+             // do something with loaded values from file
+        } else {
+             // create necessary default vals
+        }
+        */
+        //somehow works lmao
+        components::Transform t;
+        components::Rigidbody r;
+        t.setPosition({1.f, 5.f});
+        r.velocity.x = 2.f;
+        r.velocity.y = 11.f;
+        auto e = st.bind_scoped("trs", t);
+        auto er = st.bind_scoped("rgb", r);
+        std::cout << st.dump() << std::endl;
+        t.move({1.f, 0.4f});
+        r.velocity += t.getPosition();
+        std::cout << st.dump() << std::endl;
     }
 
     sf::RenderWindow& Game::getMainWindow() {
