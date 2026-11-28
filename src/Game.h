@@ -19,6 +19,7 @@
 #include "SceneLogic/SceneManager.h"
 #include "SceneLogic/Scenes/SceneMain.h"
 #include "Systems/Physics/OpenCLCollisionDetector.h"
+#include "Utility/SaveState/SavePath.h"
 #include "Utility/SaveState/Settings/Settings.h"
 #include "Utility/SaveState/SaveState.h"
 
@@ -27,6 +28,9 @@ struct nk_font_atlas;
 
 namespace ms {
     class Game {
+        utility::SaveDirs save_dir_;
+        utility::savestate::SaveState st;
+        utility::Settings settings;
         WorldBox worldBox;
         sf::ContextSettings sfml_ctx_settings;
         sf::RenderWindow mainWindow;
@@ -41,8 +45,6 @@ namespace ms {
         BT::BehaviorTreeFactory factory;
         std::unordered_set<std::string> loadedLuaScripts;
         bool closeRequested = false;
-        utility::savestate::SaveState st;
-        utility::Settings settings;
 
     public:
         Game();

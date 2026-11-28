@@ -88,6 +88,41 @@ namespace ms::utility
 
         return dir;
     }
+
+    struct SaveDirs {
+        std::filesystem::path root;
+        std::filesystem::path settings;     // settings.json, keybinds, graphics/audio options
+        std::filesystem::path saves;        // save slots / autosaves
+        std::filesystem::path backups;      // rotated copies of saves before overwrite
+        std::filesystem::path logs;         // game.log, crash reports
+        std::filesystem::path screenshots;
+        std::filesystem::path cache;        // shader cache etc., safe to delete
+    };
+
+    [[nodiscard]] inline std::optional<SaveDirs> config_save_dir(std::string_view app_name) {
+        namespace fs = std::filesystem;
+
+        auto root = save_dir(app_name);
+        if (!root) return std::nullopt;
+
+        SaveDirs d;
+        d.root        = *root;
+        d.settings    = d.root / "settings";
+        d.saves       = d.root / "saves";
+        d.backups     = d.root / "backups";
+        d.logs        = d.root / "logs";
+        d.screenshots = d.root / "screenshots";
+        d.cache       = d.root / "cache";
+
+        for (const fs::path* p : { &d.settings, &d.saves, &d.backups,
+                                   &d.logs, &d.screenshots, &d.cache }) {
+            std::error_code ec;
+            fs::create_directories(*p, ec);
+            if (ec || !fs::is_directory(*p, ec)) return std::nullopt;
+                                   }
+
+        return d;
+    }
 }
 
 #endif //METEORSHIP_SAVEPATH_H

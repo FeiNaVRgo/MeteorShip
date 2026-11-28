@@ -3,11 +3,6 @@
   "version-string": "1.0.0",
   "dependencies": [
     {
-      "name": "python3",
-      "version>=": "3.14.8",
-      "platform": "!mingw"
-    },
-    {
       "name": "boost-json",
       "version>=": "1.91.0"
     },
@@ -37,14 +32,8 @@
       "version>=": "4.10.0"
     },
     {
-      "name": "pybind11",
-      "version>=": "3.1.0",
-      "platform": "!mingw"
-    },
-    {
       "name": "lua",
-      "version>=": "5.5.1",
-      "features": ["cpp"]
+      "version>=": "5.5.1"
     },
     {
       "name": "sol2",

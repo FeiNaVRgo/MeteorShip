@@ -20,7 +20,6 @@
 #include <glad/glad.h>
 #include <behaviortree_cpp/bt_factory.h>
 #include <behaviortree_cpp/xml_parsing.h>
-#include <pybind11/embed.h>
 #include <sol/sol.hpp>
 #include <filesystem>
 #include <stdexcept>
@@ -49,24 +48,24 @@
 #include "../Bindings/LuaBinding/lua_bindings.h"
 #include "Utility/SaveState/SavePath.h"
 
-namespace py = pybind11;
 
 namespace ms
 {
-    Game::Game(): worldBox(),
+    Game::Game():
+                  save_dir_(utility::config_save_dir("MeteorShip").value_or({})),
+                  settings(save_dir_.settings / "settings.json"),
+                  worldBox(),
                   sfml_ctx_settings(24, 8, 4, 3, 3),
-                  mainWindow(sf::VideoMode({800, 600}), "My window", sf::Style::Default, sf::State::Windowed, sfml_ctx_settings),
+                  mainWindow(sf::VideoMode({settings->window.width, settings->window.height}), "My window", sf::Style::Default, sf::State::Windowed, sfml_ctx_settings),
                   eventHandler(*this),
                   sceneManager(worldBox.getWorlds()),
-                  globalBlackboard(BT::Blackboard::create()),
-                  settings(utility::save_dir("MeteorShip").value_or({}) / "config" / "settings.json") {
-
+                  globalBlackboard(BT::Blackboard::create()) {
         lua.open_libraries(sol::lib::base, sol::lib::package);
         scripting::lua_bind(lua, *this);
-        bt_nodes::registerLuaBehaviorNodes(factory, *this);
 
         {
             //here is where we register all of our nodes for behavior
+            bt_nodes::registerLuaBehaviorNodes(factory, *this);
             factory.registerNodeType<bt_nodes::IsPlayerVisible>("IsPlayerVisible");
             factory.registerNodeType<bt_nodes::RotateTowards>("RotateTowards");
             factory.registerNodeType<bt_nodes::MoveForward>("MoveForward");
